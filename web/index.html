@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>CYPHERPUNK 2140 — Mission Index</title>
+    <meta name="description" content="Hub di accesso ai puzzle crittografici della conferenza Cypherpunk 2140.">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Share+Tech+Mono&family=VT323&display=swap');
+
+        :root {
+            --green: #00ff41;
+            --green-dim: #00aa2a;
+            --green-dark: #004d14;
+            --green-glow: #00ff4180;
+            --amber: #ffb000;
+            --amber-dim: #aa7500;
+            --red: #ff3333;
+            --red-dim: #661a1a;
+            --bg: #0a0a0a;
+            --bg-panel: #0f0f0f;
+            --bg-inset: #050505;
+            --border: #1a1a1a;
+            --border-light: #2a2a2a;
+            --text-dim: #555;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html,
+        body {
+            background: var(--bg);
+            color: var(--green);
+            font-family: 'JetBrains Mono', monospace;
+            min-height: 100dvh;
+            overflow-x: hidden;
+        }
+
+        /* CRT scanline overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: repeating-linear-gradient(0deg, transparent, transparent 2px,
+                    rgba(0, 255, 65, 0.015) 2px, rgba(0, 255, 65, 0.015) 4px);
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        /* === HEADER === */
+        .header {
+            padding: 24px 20px 18px;
+            border-bottom: 1px solid var(--border-light);
+            background: linear-gradient(180deg, #111 0%, var(--bg) 100%);
+            text-align: center;
+        }
+
+        .header-serial {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 10px;
+            color: var(--text-dim);
+            letter-spacing: 3px;
+            margin-bottom: 8px;
+        }
+
+        .header-title {
+            font-family: 'VT323', monospace;
+            font-size: 32px;
+            font-weight: 400;
+            letter-spacing: 6px;
+            color: var(--green);
+            text-shadow: 0 0 20px var(--green-glow), 0 0 40px rgba(0, 255, 65, 0.2);
+            line-height: 1.1;
+        }
+
+        .header-sub {
+            font-size: 10px;
+            color: var(--green-dim);
+            margin-top: 8px;
+            letter-spacing: 2px;
+        }
+
+        /* Typing cursor blink */
+        .cursor-blink::after {
+            content: '█';
+            animation: blink 1s step-end infinite;
+            color: var(--green);
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0;
+            }
+        }
+
+        /* === STATUS BAR === */
+        .status-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 20px;
+            background: var(--bg-panel);
+            border-bottom: 1px solid var(--border);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 10px;
+            color: var(--text-dim);
+            letter-spacing: 1px;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--green);
+            box-shadow: 0 0 6px var(--green);
+            animation: pulse-dot 2s ease-in-out infinite;
+            flex-shrink: 0;
+        }
+
+        @keyframes pulse-dot {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.4;
+            }
+        }
+
+        .status-bar .sep {
+            color: #333;
+        }
+
+        /* === MAIN GRID === */
+        .main {
+            padding: 20px;
+            max-width: 720px;
+            margin: 0 auto;
+        }
+
+        .section-label {
+            font-size: 10px;
+            color: var(--amber);
+            letter-spacing: 3px;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+
+        .puzzle-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        @media (min-width: 520px) {
+            .puzzle-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        /* === PUZZLE CARD === */
+        .puzzle-card {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-light);
+            border-radius: 4px;
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            position: relative;
+            overflow: hidden;
+            transition: border-color 0.25s, box-shadow 0.25s, transform 0.15s;
+            cursor: default;
+        }
+
+        /* Subtle circuit-trace decoration */
+        .puzzle-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 60px;
+            height: 60px;
+            background:
+                linear-gradient(135deg, transparent 48%, var(--border) 48%, var(--border) 50%, transparent 50%),
+                linear-gradient(45deg, transparent 48%, var(--border) 48%, var(--border) 50%, transparent 50%);
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .puzzle-card.active {
+            cursor: pointer;
+            border-color: var(--green-dark);
+        }
+
+        .puzzle-card.active:hover {
+            border-color: var(--green);
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.08), inset 0 0 30px rgba(0, 255, 65, 0.02);
+            transform: translateY(-1px);
+        }
+
+        .puzzle-card.active:active {
+            transform: translateY(0);
+        }
+
+        .puzzle-card.locked {
+            opacity: 0.45;
+        }
+
+        .puzzle-card.locked::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(-45deg,
+                    transparent,
+                    transparent 8px,
+                    rgba(255, 255, 255, 0.008) 8px,
+                    rgba(255, 255, 255, 0.008) 16px);
+            pointer-events: none;
+        }
+
+        /* Card header row */
+        .card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-seed {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 10px;
+            color: var(--text-dim);
+            letter-spacing: 2px;
+        }
+
+        .card-status {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 9px;
+            letter-spacing: 1px;
+            padding: 2px 6px;
+            border-radius: 2px;
+        }
+
+        .card-status.active {
+            color: var(--green);
+            background: rgba(0, 255, 65, 0.08);
+            border: 1px solid var(--green-dark);
+        }
+
+        .card-status.classified {
+            color: var(--red);
+            background: rgba(255, 51, 51, 0.06);
+            border: 1px solid var(--red-dim);
+        }
+
+        /* Card title */
+        .card-name {
+            font-family: 'VT323', monospace;
+            font-size: 22px;
+            letter-spacing: 3px;
+            color: var(--green);
+            line-height: 1.2;
+        }
+
+        .puzzle-card.locked .card-name {
+            color: var(--text-dim);
+        }
+
+        .card-desc {
+            font-size: 11px;
+            color: var(--green-dim);
+            letter-spacing: 0.5px;
+            line-height: 1.5;
+        }
+
+        .puzzle-card.locked .card-desc {
+            color: #333;
+        }
+
+        /* Card bottom row */
+        .card-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 4px;
+            padding-top: 8px;
+            border-top: 1px solid var(--border);
+        }
+
+        .card-type {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 9px;
+            color: var(--amber-dim);
+            letter-spacing: 1px;
+        }
+
+        .puzzle-card.locked .card-type {
+            color: #333;
+        }
+
+        .card-arrow {
+            font-size: 14px;
+            color: var(--green-dim);
+            transition: transform 0.2s, color 0.2s;
+        }
+
+        .puzzle-card.active:hover .card-arrow {
+            color: var(--green);
+            transform: translateX(3px);
+        }
+
+        .puzzle-card.locked .card-arrow {
+            display: none;
+        }
+
+        .card-lock {
+            font-size: 12px;
+            color: #333;
+        }
+
+        /* === FOOTER === */
+        .footer {
+            padding: 16px 20px;
+            text-align: center;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 9px;
+            color: var(--text-dim);
+            letter-spacing: 1px;
+            border-top: 1px solid var(--border);
+            margin-top: 20px;
+        }
+
+        .footer .sep {
+            color: #333;
+            margin: 0 6px;
+        }
+
+        /* Progress bar */
+        .progress-section {
+            margin-bottom: 20px;
+        }
+
+        .progress-bar-bg {
+            background: var(--bg-inset);
+            border: 1px solid var(--border);
+            border-radius: 2px;
+            height: 6px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--green);
+            box-shadow: 0 0 8px var(--green-glow);
+            border-radius: 2px;
+            transition: width 0.6s ease;
+        }
+
+        .progress-text {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 10px;
+            color: var(--green-dim);
+            letter-spacing: 1px;
+            margin-top: 6px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* No-link reset */
+        a.puzzle-link {
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header class="header">
+        <div class="header-serial">SYS.INIT // NODE 0xC1PH3R-2140</div>
+        <h1 class="header-title">CYPHERPUNK 2140</h1>
+        <div class="header-sub cursor-blink">MISSION INDEX — 12 SEED WORDS TO RECOVER</div>
+    </header>
+
+    <div class="status-bar">
+        <div class="status-dot"></div>
+        <span>NETWORK ACTIVE</span>
+        <span class="sep">|</span>
+        <span>SEEDS RECOVERED: 2/12</span>
+        <span class="sep">|</span>
+        <span>CLEARANCE: LEVEL-01</span>
+    </div>
+
+    <main class="main">
+        <div class="progress-section">
+            <div class="section-label">Recovery progress</div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" style="width: 16.66%"></div>
+            </div>
+            <div class="progress-text">
+                <span>2 / 12 WORDS</span>
+                <span>16.7%</span>
+            </div>
+        </div>
+
+        <div class="section-label">Seed puzzles</div>
+        <div class="puzzle-grid">
+
+            <!-- SEED 01 — LOCKED -->
+            <div class="puzzle-card locked">
+                <div class="card-top">
+                    <span class="card-seed">SEED #01</span>
+                    <span class="card-status classified">CLASSIFIED</span>
+                </div>
+                <div class="card-name">GHOST-NET</div>
+                <div class="card-desc">Packet-sniffing su rete anonima. Intercetta il frame giusto.</div>
+                <div class="card-bottom">
+                    <span class="card-type">NET — RECON</span>
+                    <span class="card-lock">🔒</span>
+                </div>
+            </div>
+
+            <!-- SEED 02 — ACTIVE -->
+            <a href="./seed02/" class="puzzle-link">
+                <div class="puzzle-card active">
+                    <div class="card-top">
+                        <span class="card-seed">SEED #02</span>
+                        <span class="card-status active">ACTIVE</span>
+                    </div>
+                    <div class="card-name">SIG-INT RX7</div>
+                    <div class="card-desc">Signal interceptor. Decodifica la trasmissione Morse nascosta.</div>
+                    <div class="card-bottom">
+                        <span class="card-type">SIGNAL — MORSE</span>
+                        <span class="card-arrow">▶</span>
+                    </div>
+                </div>
+            </a>
+
+            <!-- SEED 03 — LOCKED -->
+            <div class="puzzle-card locked">
+                <div class="card-top">
+                    <span class="card-seed">SEED #03</span>
+                    <span class="card-status classified">CLASSIFIED</span>
+                </div>
+                <div class="card-name">ZERO-DAY</div>
+                <div class="card-desc">Exploit in un sistema legacy. Trova la vulnerabilità nel codice.</div>
+                <div class="card-bottom">
+                    <span class="card-type">CODE — EXPLOIT</span>
+                    <span class="card-lock">🔒</span>
+                </div>
+            </div>
+
+            <!-- SEED 04 — LOCKED -->
+            <div class="puzzle-card locked">
+                <div class="card-top">
+                    <span class="card-seed">SEED #04</span>
+                    <span class="card-status classified">CLASSIFIED</span>
+                </div>
+                <div class="card-name">PKI-VAULT</div>
+                <div class="card-desc">Crittografia asimmetrica. Ricostruisci la chiave dal frammento.</div>
+                <div class="card-bottom">
+                    <span class="card-type">CRYPTO — PKI</span>
+                    <span class="card-lock">🔒</span>
+                </div>
+            </div>
+
+            <!-- SEED 05 — ACTIVE -->
+            <a href="./seed05/" class="puzzle-link">
+                <div class="puzzle-card active">
+                    <div class="card-top">
+                        <span class="card-seed">SEED #05</span>
+                        <span class="card-status active">ACTIVE</span>
+                    </div>
+                    <div class="card-name">C1PH3R-BOX</div>
+                    <div class="card-desc">Binary decryption unit. Configura i rotori e l'operazione logica.</div>
+                    <div class="card-bottom">
+                        <span class="card-type">BINARY — LOGIC</span>
+                        <span class="card-arrow">▶</span>
+                    </div>
+                </div>
+            </a>
+
+            <!-- SEED 06 — LOCKED -->
+            <div class="puzzle-card locked">
+                <div class="card-top">
+                    <span class="card-seed">SEED #06</span>
+                    <span class="card-status classified">CLASSIFIED</span>
+                </div>
+                <div class="card-name">HASH-MINE</div>
+                <div class="card-desc">Proof-of-work. Trova il nonce che soddisfa la difficoltà target.</div>
+                <div class="card-bottom">
+                    <span class="card-type">HASH — POW</span>
+                    <span class="card-lock">🔒</span>
+                </div>
+            </div>
+
+            <!-- SEED 07 — LOCKED -->
+            <div class="puzzle-card locked">
+                <div class="card-top">
+                    <span class="card-seed">SEED #07</span>
+                    <span class="card-status classified">CLASSIFIED</span>
+                </div>
+                <div class="card-name">DARK-POOL</div>
+                <div class="card-desc">Analisi on-chain. Traccia la transazione attraverso il mixer.</div>
+                <div class="card-bottom">
+                    <span class="card-type">CHAIN — ANALYSIS</span>
+                    <span class="card-lock">🔒</span>
+                </div>
+            </div>
+
+            <!-- SEED 08 — LOCKED -->
+            <div class="puzzle-card locked">
+                <div class="card-top">
+                    <span class="card-seed">SEED #08</span>
+                    <span class="card-status classified">CLASSIFIED</span>
+                </div>
+                <div class="card-name">ONION-ROUTE</div>
+                <div class="card-desc">Multi-layer encryption. Sbuccia ogni strato per rivelare il path.</div>
+                <div class="card-bottom">
+                    <span class="card-type">NET — ROUTING</span>
+                    <span class="card-lock">🔒</span>
+                </div>
+            </div>
+
+            <!-- SEED 09 — LOCKED -->
+            <div class="puzzle-card locked">
+                <div class="card-top">
+                    <span class="card-seed">SEED #09</span>
+                    <span class="card-status classified">CLASSIFIED</span>
+                </div>
+                <div class="card-name">STEG-FRAME</div>
+                <div class="card-desc">Steganografia digitale. Il messaggio è nascosto nell'immagine.</div>
+                <div class="card-bottom">
+                    <span class="card-type">STEG — IMAGE</span>
+                    <span class="card-lock">🔒</span>
+                </div>
+            </div>
+
+            <!-- SEED 10 — LOCKED -->
+            <div class="puzzle-card locked">
+                <div class="card-top">
+                    <span class="card-seed">SEED #10</span>
+                    <span class="card-status classified">CLASSIFIED</span>
+                </div>
+                <div class="card-name">BLOCK-SYNC</div>
+                <div class="card-desc">Consenso distribuito. Risolvi il conflitto tra i nodi della rete.</div>
+                <div class="card-bottom">
+                    <span class="card-type">P2P — CONSENSUS</span>
+                    <span class="card-lock">🔒</span>
+                </div>
+            </div>
+
+            <!-- SEED 11 — LOCKED -->
+            <div class="puzzle-card locked">
+                <div class="card-top">
+                    <span class="card-seed">SEED #11</span>
+                    <span class="card-status classified">CLASSIFIED</span>
+                </div>
+                <div class="card-name">COLD-KEY</div>
+                <div class="card-desc">Air-gapped recovery. Ricostruisci la chiave dal cold storage.</div>
+                <div class="card-bottom">
+                    <span class="card-type">CRYPTO — RECOVERY</span>
+                    <span class="card-lock">🔒</span>
+                </div>
+            </div>
+
+            <!-- SEED 12 — LOCKED -->
+            <div class="puzzle-card locked">
+                <div class="card-top">
+                    <span class="card-seed">SEED #12</span>
+                    <span class="card-status classified">CLASSIFIED</span>
+                </div>
+                <div class="card-name">GENESIS-BLK</div>
+                <div class="card-desc">Il blocco finale. Solo chi ha tutte le seed può accedere.</div>
+                <div class="card-bottom">
+                    <span class="card-type">FINAL — GENESIS</span>
+                    <span class="card-lock">🔒</span>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <footer class="footer">
+        0xC1PH3R SYSTEMS<span class="sep">|</span>CYPHERPUNK 2140<span class="sep">|</span>ALL RIGHTS ENCRYPTED
+    </footer>
+
+</body>
+
+</html>
