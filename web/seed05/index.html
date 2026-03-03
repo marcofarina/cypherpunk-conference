@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>C1PH3R-BOX // Decryption Unit</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Share+Tech+Mono&display=swap');
+
+        :root {
+            --green: #00ff41;
+            --green-dim: #00aa2a;
+            --green-dark: #004d14;
+            --green-glow: #00ff4180;
+            --amber: #ffb000;
+            --amber-dim: #aa7500;
+            --red: #ff3333;
+            --red-dim: #aa2222;
+            --bg: #0a0a0a;
+            --bg-panel: #0f0f0f;
+            --bg-inset: #050505;
+            --border: #1a1a1a;
+            --border-light: #2a2a2a;
+            --text-dim: #555;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html,
+        body {
+            background: var(--bg);
+            color: var(--green);
+            font-family: 'JetBrains Mono', monospace;
+            min-height: 100dvh;
+            overflow-x: hidden;
+        }
+
+        /* === SCANLINE OVERLAY === */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: repeating-linear-gradient(0deg,
+                    transparent,
+                    transparent 2px,
+                    rgba(0, 255, 65, 0.015) 2px,
+                    rgba(0, 255, 65, 0.015) 4px);
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        /* === HEADER === */
+        .header {
+            padding: 16px 16px 12px;
+            border-bottom: 1px solid var(--border-light);
+            background: linear-gradient(180deg, #111 0%, var(--bg) 100%);
+        }
+
+        .header-id {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 10px;
+            color: var(--text-dim);
+            letter-spacing: 2px;
+            margin-bottom: 4px;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-shadow: 0 0 20px var(--green-glow), 0 0 40px rgba(0, 255, 65, 0.2);
+        }
+
+        .header-sub {
+            font-size: 10px;
+            color: var(--green-dim);
+            margin-top: 4px;
+            letter-spacing: 1px;
+        }
+
+        /* === STATUS BAR === */
+        .status-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--bg-panel);
+            border-bottom: 1px solid var(--border);
+            font-size: 10px;
+            color: var(--text-dim);
+            letter-spacing: 1px;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--green);
+            box-shadow: 0 0 6px var(--green);
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-dot {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.4;
+            }
+        }
+
+        /* === MAIN CONTENT === */
+        .main {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* === ROTOR SECTION === */
+        .rotors-label {
+            font-size: 10px;
+            color: var(--text-dim);
+            letter-spacing: 2px;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        .rotor-group {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-light);
+            border-radius: 4px;
+            padding: 12px;
+        }
+
+        .rotor-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .rotor-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .rotor-label {
+            font-size: 10px;
+            color: var(--amber);
+            letter-spacing: 1px;
+            width: 20px;
+            flex-shrink: 0;
+        }
+
+        .rotor-display {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .bit-cell {
+            flex: 1;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-inset);
+            border: 1px solid var(--border);
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--green);
+            font-family: 'Share Tech Mono', monospace;
+            transition: all 0.15s ease;
+        }
+
+        .bit-cell.highlight {
+            background: rgba(0, 255, 65, 0.08);
+            border-color: var(--green-dark);
+        }
+
+        .rotor-shift {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            flex-shrink: 0;
+        }
+
+        .shift-btn {
+            width: 32px;
+            height: 22px;
+            background: var(--bg-inset);
+            border: 1px solid var(--border-light);
+            color: var(--green-dim);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 2px;
+            transition: all 0.1s ease;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .shift-btn:active {
+            background: var(--green-dark);
+            border-color: var(--green);
+            color: var(--green);
+        }
+
+        .shift-count {
+            font-size: 10px;
+            color: var(--text-dim);
+            text-align: center;
+            width: 32px;
+            flex-shrink: 0;
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        /* === OPERATION SELECTOR === */
+        .op-section {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-light);
+            border-radius: 4px;
+            padding: 12px;
+        }
+
+        .op-label {
+            font-size: 10px;
+            color: var(--text-dim);
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .op-selector {
+            display: flex;
+            gap: 4px;
+        }
+
+        .op-btn {
+            flex: 1;
+            height: 44px;
+            background: var(--bg-inset);
+            border: 1px solid var(--border-light);
+            color: var(--green-dim);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 14px;
+            font-weight: 500;
+            letter-spacing: 2px;
+            cursor: pointer;
+            border-radius: 2px;
+            transition: all 0.15s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .op-btn .op-index {
+            font-size: 8px;
+            color: var(--text-dim);
+            letter-spacing: 1px;
+        }
+
+        .op-btn.active {
+            background: rgba(0, 255, 65, 0.1);
+            border-color: var(--green);
+            color: var(--green);
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.15);
+        }
+
+        .op-btn:active {
+            transform: scale(0.97);
+        }
+
+        /* === OUTPUT === */
+        .output-section {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-light);
+            border-radius: 4px;
+            padding: 12px;
+        }
+
+        .output-label {
+            font-size: 10px;
+            color: var(--text-dim);
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .output-binary {
+            display: flex;
+            gap: 2px;
+            margin-bottom: 10px;
+        }
+
+        .out-bit {
+            flex: 1;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-inset);
+            border: 1px solid var(--border);
+            font-size: 15px;
+            font-weight: 700;
+            font-family: 'Share Tech Mono', monospace;
+            color: var(--amber);
+            transition: all 0.2s ease;
+        }
+
+        .output-decimal {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            background: var(--bg-inset);
+            border: 1px solid var(--border);
+            border-radius: 2px;
+        }
+
+        .output-dec-label {
+            font-size: 10px;
+            color: var(--text-dim);
+            letter-spacing: 1px;
+        }
+
+        .output-dec-value {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--amber);
+            font-family: 'Share Tech Mono', monospace;
+            text-shadow: 0 0 15px rgba(255, 176, 0, 0.4);
+            letter-spacing: 2px;
+        }
+
+        /* === SUCCESS STATE === */
+        .output-section.success {
+            border-color: var(--green);
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.1);
+        }
+
+        .output-section.success .out-bit {
+            color: var(--green);
+            border-color: var(--green-dark);
+            text-shadow: 0 0 8px var(--green-glow);
+        }
+
+        .output-section.success .output-dec-value {
+            color: var(--green);
+            text-shadow: 0 0 15px var(--green-glow);
+        }
+
+        .bip39-result {
+            display: none;
+            margin-top: 10px;
+            padding: 12px;
+            background: rgba(0, 255, 65, 0.05);
+            border: 1px solid var(--green-dark);
+            border-radius: 2px;
+            text-align: center;
+        }
+
+        .bip39-result.visible {
+            display: block;
+            animation: reveal 0.5s ease;
+        }
+
+        .bip39-word {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: var(--green);
+            text-shadow: 0 0 20px var(--green-glow), 0 0 40px rgba(0, 255, 65, 0.2);
+        }
+
+        .bip39-hint {
+            font-size: 9px;
+            color: var(--green-dim);
+            margin-top: 6px;
+            letter-spacing: 1px;
+        }
+
+        @keyframes reveal {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* === FOOTER === */
+        .footer {
+            padding: 12px 16px;
+            text-align: center;
+            font-size: 9px;
+            color: var(--text-dim);
+            letter-spacing: 1px;
+            border-top: 1px solid var(--border);
+            margin-top: auto;
+        }
+
+        /* === RESPONSIVE === */
+        @media (min-width: 420px) {
+
+            .bit-cell,
+            .out-bit {
+                height: 40px;
+                font-size: 16px;
+            }
+
+            .header-title {
+                font-size: 20px;
+            }
+
+            .output-dec-value {
+                font-size: 26px;
+            }
+        }
+
+        /* === BIT TRANSITION === */
+        .bit-cell.shifting {
+            color: var(--green-dark);
+            transition: color 0.05s;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <div class="header-id">UNIT #5 — SERIAL 0xC1PH3R-7F2A</div>
+        <div class="header-title">C1PH3R-BOX</div>
+        <div class="header-sub">Binary Decryption Unit v2.1 — 3-Rotor Configuration</div>
+    </div>
+
+    <div class="status-bar">
+        <div class="status-dot"></div>
+        <span>SYSTEM READY — AWAITING CONFIGURATION</span>
+    </div>
+
+    <div class="main">
+
+        <!-- ROTORS -->
+        <div>
+            <div class="rotors-label">Rotori di ingresso</div>
+            <div class="rotor-group">
+                <div class="rotor-row" id="rotor-0">
+                    <div class="rotor-label">R1</div>
+                    <div class="rotor-display" id="display-0"></div>
+                    <div class="shift-count" id="shift-count-0">0</div>
+                    <div class="rotor-shift">
+                        <button class="shift-btn" onclick="shiftRotor(0, -1)" aria-label="Shift left">◀</button>
+                        <button class="shift-btn" onclick="shiftRotor(0, 1)" aria-label="Shift right">▶</button>
+                    </div>
+                </div>
+                <div class="rotor-row" id="rotor-1">
+                    <div class="rotor-label">R2</div>
+                    <div class="rotor-display" id="display-1"></div>
+                    <div class="shift-count" id="shift-count-1">0</div>
+                    <div class="rotor-shift">
+                        <button class="shift-btn" onclick="shiftRotor(1, -1)" aria-label="Shift left">◀</button>
+                        <button class="shift-btn" onclick="shiftRotor(1, 1)" aria-label="Shift right">▶</button>
+                    </div>
+                </div>
+                <div class="rotor-row" id="rotor-2">
+                    <div class="rotor-label">R3</div>
+                    <div class="rotor-display" id="display-2"></div>
+                    <div class="shift-count" id="shift-count-2">0</div>
+                    <div class="rotor-shift">
+                        <button class="shift-btn" onclick="shiftRotor(2, -1)" aria-label="Shift left">◀</button>
+                        <button class="shift-btn" onclick="shiftRotor(2, 1)" aria-label="Shift right">▶</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- OPERATION -->
+        <div class="op-section">
+            <div class="op-label">Operazione logica</div>
+            <div class="op-selector">
+                <button class="op-btn" onclick="setOp(0)" id="op-0">
+                    <span>AND</span>
+                    <span class="op-index">[0]</span>
+                </button>
+                <button class="op-btn" onclick="setOp(1)" id="op-1">
+                    <span>OR</span>
+                    <span class="op-index">[1]</span>
+                </button>
+                <button class="op-btn active" onclick="setOp(2)" id="op-2">
+                    <span>XOR</span>
+                    <span class="op-index">[2]</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- OUTPUT -->
+        <div class="output-section" id="output-section">
+            <div class="output-label">Output</div>
+            <div class="output-binary" id="output-bits"></div>
+            <div class="output-decimal">
+                <span class="output-dec-label">DEC</span>
+                <span class="output-dec-value" id="output-dec">0000</span>
+            </div>
+            <div class="bip39-result" id="bip39-result">
+                <div class="bip39-word" id="bip39-word"></div>
+                <div class="bip39-hint">BIP-39 #<span id="bip39-index"></span></div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        0xC1PH3R DECRYPTION UNIT — CYPHERPUNK 2140
+    </div>
+
+    <script>
+        // === CONFIGURATION ===
+        const BITS = 11;
+        const REGISTERS = [
+            0b10100011110,  // R1 = 1310
+            0b00011100101,  // R2 = 229
+            0b11011110001,  // R3 = 1777
+        ];
+        const TARGET = 1379; // "proof"
+        const TARGET_WORD = "proof";
+
+        // BIP-39 list (loaded inline for offline use)
+        const BIP39_TARGET_INDEX = TARGET;
+        const BIP39_TARGET_WORD = TARGET_WORD;
+
+        // === STATE ===
+        let shifts = [0, 0, 0];
+        let currentOp = 2; // XOR
+
+        // === INIT ===
+        function init() {
+            // Build bit displays
+            for (let r = 0; r < 3; r++) {
+                const display = document.getElementById(`display-${r}`);
+                display.innerHTML = '';
+                for (let b = 0; b < BITS; b++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'bit-cell';
+                    cell.id = `bit-${r}-${b}`;
+                    display.appendChild(cell);
+                }
+            }
+
+            // Build output bits
+            const outBits = document.getElementById('output-bits');
+            outBits.innerHTML = '';
+            for (let b = 0; b < BITS; b++) {
+                const cell = document.createElement('div');
+                cell.className = 'out-bit';
+                cell.id = `out-${b}`;
+                outBits.appendChild(cell);
+            }
+
+            updateAll();
+        }
+
+        // === CIRCULAR SHIFT RIGHT ===
+        function rotateRight(val, n) {
+            n = ((n % BITS) + BITS) % BITS;
+            return ((val >>> n) | (val << (BITS - n))) & ((1 << BITS) - 1);
+        }
+
+        // === GET SHIFTED VALUE ===
+        function getShifted(regIndex) {
+            return rotateRight(REGISTERS[regIndex], shifts[regIndex]);
+        }
+
+        // === APPLY OPERATION ===
+        function applyOp(a, b) {
+            switch (currentOp) {
+                case 0: return a & b;
+                case 1: return a | b;
+                case 2: return a ^ b;
+            }
+        }
+
+        // === COMPUTE OUTPUT ===
+        function computeOutput() {
+            let result = getShifted(0);
+            for (let r = 1; r < 3; r++) {
+                result = applyOp(result, getShifted(r));
+            }
+            return result;
+        }
+
+        // === UPDATE DISPLAY ===
+        function updateAll() {
+            // Update rotor displays
+            for (let r = 0; r < 3; r++) {
+                const shifted = getShifted(r);
+                for (let b = 0; b < BITS; b++) {
+                    const bit = (shifted >> (BITS - 1 - b)) & 1;
+                    const cell = document.getElementById(`bit-${r}-${b}`);
+                    cell.textContent = bit;
+                    cell.classList.toggle('highlight', bit === 1);
+                }
+                document.getElementById(`shift-count-${r}`).textContent = shifts[r];
+            }
+
+            // Compute and display output
+            const output = computeOutput();
+            for (let b = 0; b < BITS; b++) {
+                const bit = (output >> (BITS - 1 - b)) & 1;
+                document.getElementById(`out-${b}`).textContent = bit;
+            }
+
+            const decStr = String(output).padStart(4, '0');
+            document.getElementById('output-dec').textContent = decStr;
+
+            // Check for success
+            const section = document.getElementById('output-section');
+            const resultDiv = document.getElementById('bip39-result');
+
+            if (output === TARGET) {
+                section.classList.add('success');
+                resultDiv.classList.add('visible');
+                document.getElementById('bip39-word').textContent = BIP39_TARGET_WORD;
+                document.getElementById('bip39-index').textContent = TARGET;
+                document.querySelector('.status-bar').innerHTML =
+                    '<div class="status-dot" style="background:var(--green);box-shadow:0 0 6px var(--green)"></div>' +
+                    '<span style="color:var(--green)">DECRYPTION COMPLETE — WORD RECOVERED</span>';
+            } else {
+                section.classList.remove('success');
+                resultDiv.classList.remove('visible');
+                document.querySelector('.status-bar').innerHTML =
+                    '<div class="status-dot"></div>' +
+                    '<span>SYSTEM READY — AWAITING CONFIGURATION</span>';
+            }
+        }
+
+        // === SHIFT ROTOR ===
+        function shiftRotor(index, direction) {
+            shifts[index] = ((shifts[index] + direction) % BITS + BITS) % BITS;
+            updateAll();
+        }
+
+        // === SET OPERATION ===
+        function setOp(op) {
+            currentOp = op;
+            document.querySelectorAll('.op-btn').forEach((btn, i) => {
+                btn.classList.toggle('active', i === op);
+            });
+            updateAll();
+        }
+
+        // === TOUCH HANDLING FOR BUTTONS ===
+        document.addEventListener('touchstart', function () { }, { passive: true });
+
+        // === GO ===
+        init();
+    </script>
+
+</body>
+
+</html>
