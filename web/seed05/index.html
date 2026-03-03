@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>C1PH3R-BOX // Decryption Unit</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Share+Tech+Mono&display=swap');
@@ -15,8 +15,6 @@
             --green-glow: #00ff4180;
             --amber: #ffb000;
             --amber-dim: #aa7500;
-            --red: #ff3333;
-            --red-dim: #aa2222;
             --bg: #0a0a0a;
             --bg-panel: #0f0f0f;
             --bg-inset: #050505;
@@ -39,23 +37,19 @@
             font-family: 'JetBrains Mono', monospace;
             min-height: 100dvh;
             overflow-x: hidden;
+            touch-action: manipulation;
         }
 
-        /* === SCANLINE OVERLAY === */
         body::before {
             content: '';
             position: fixed;
             inset: 0;
-            background: repeating-linear-gradient(0deg,
-                    transparent,
-                    transparent 2px,
-                    rgba(0, 255, 65, 0.015) 2px,
-                    rgba(0, 255, 65, 0.015) 4px);
+            background: repeating-linear-gradient(0deg, transparent, transparent 2px,
+                    rgba(0, 255, 65, 0.015) 2px, rgba(0, 255, 65, 0.015) 4px);
             pointer-events: none;
             z-index: 1000;
         }
 
-        /* === HEADER === */
         .header {
             padding: 16px 16px 12px;
             border-bottom: 1px solid var(--border-light);
@@ -84,7 +78,6 @@
             letter-spacing: 1px;
         }
 
-        /* === STATUS BAR === */
         .status-bar {
             display: flex;
             align-items: center;
@@ -110,15 +103,14 @@
 
             0%,
             100% {
-                opacity: 1;
+                opacity: 1
             }
 
             50% {
-                opacity: 0.4;
+                opacity: 0.4
             }
         }
 
-        /* === MAIN CONTENT === */
         .main {
             padding: 16px;
             display: flex;
@@ -126,13 +118,13 @@
             gap: 16px;
         }
 
-        /* === ROTOR SECTION === */
-        .rotors-label {
+        .section-label {
             font-size: 10px;
-            color: var(--text-dim);
+            color: var(--amber);
             letter-spacing: 2px;
             margin-bottom: 4px;
             text-transform: uppercase;
+            font-weight: 500;
         }
 
         .rotor-group {
@@ -142,15 +134,19 @@
             padding: 12px;
         }
 
+        .rotor-block {
+            margin-bottom: 10px;
+        }
+
+        .rotor-block:last-of-type {
+            margin-bottom: 0;
+        }
+
         .rotor-row {
             display: flex;
             align-items: center;
-            gap: 8px;
-            margin-bottom: 12px;
-        }
-
-        .rotor-row:last-child {
-            margin-bottom: 0;
+            gap: 6px;
+            touch-action: none;
         }
 
         .rotor-label {
@@ -166,6 +162,11 @@
             display: flex;
             align-items: center;
             gap: 2px;
+            cursor: grab;
+        }
+
+        .rotor-display.swiping {
+            cursor: grabbing;
         }
 
         .bit-cell {
@@ -181,6 +182,8 @@
             color: var(--green);
             font-family: 'Share Tech Mono', monospace;
             transition: all 0.15s ease;
+            -webkit-user-select: none;
+            user-select: none;
         }
 
         .bit-cell.highlight {
@@ -188,21 +191,21 @@
             border-color: var(--green-dark);
         }
 
-        .rotor-shift {
+        .rotor-controls {
             display: flex;
-            flex-direction: column;
+            align-items: center;
             gap: 2px;
             flex-shrink: 0;
         }
 
         .shift-btn {
-            width: 32px;
-            height: 22px;
+            width: 34px;
+            height: 34px;
             background: var(--bg-inset);
             border: 1px solid var(--border-light);
             color: var(--green-dim);
             font-family: 'Share Tech Mono', monospace;
-            font-size: 12px;
+            font-size: 13px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -211,6 +214,7 @@
             transition: all 0.1s ease;
             -webkit-user-select: none;
             user-select: none;
+            touch-action: manipulation;
         }
 
         .shift-btn:active {
@@ -219,29 +223,65 @@
             color: var(--green);
         }
 
-        .shift-count {
-            font-size: 10px;
-            color: var(--text-dim);
-            text-align: center;
-            width: 32px;
-            flex-shrink: 0;
+        .shift-value {
+            font-size: 12px;
+            color: var(--green-dim);
             font-family: 'Share Tech Mono', monospace;
+            width: 18px;
+            text-align: center;
+            flex-shrink: 0;
         }
 
-        /* === OPERATION SELECTOR === */
+        /* Shift indicator: 11 pips, pip 0 is amber (zero-marker) */
+        .shift-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            margin-top: 4px;
+            margin-bottom: 4px;
+            padding-left: 26px;
+        }
+
+        .shift-pip {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--border-light);
+            transition: all 0.15s ease;
+        }
+
+        .shift-pip.active {
+            background: var(--green);
+            box-shadow: 0 0 5px var(--green);
+        }
+
+        .shift-pip.zero-marker {
+            border: 1px solid var(--amber-dim);
+            background: transparent;
+        }
+
+        .shift-pip.zero-marker.active {
+            background: var(--amber);
+            border-color: var(--amber);
+            box-shadow: 0 0 5px var(--amber);
+        }
+
+        .swipe-hint {
+            font-size: 9px;
+            color: var(--text-dim);
+            text-align: center;
+            margin-top: 8px;
+            letter-spacing: 1px;
+            opacity: 0.6;
+        }
+
+        /* Operation */
         .op-section {
             background: var(--bg-panel);
             border: 1px solid var(--border-light);
             border-radius: 4px;
             padding: 12px;
-        }
-
-        .op-label {
-            font-size: 10px;
-            color: var(--text-dim);
-            letter-spacing: 2px;
-            margin-bottom: 8px;
-            text-transform: uppercase;
         }
 
         .op-selector {
@@ -269,6 +309,7 @@
             gap: 2px;
             -webkit-user-select: none;
             user-select: none;
+            touch-action: manipulation;
         }
 
         .op-btn .op-index {
@@ -288,7 +329,7 @@
             transform: scale(0.97);
         }
 
-        /* === OUTPUT === */
+        /* Output */
         .output-section {
             background: var(--bg-panel);
             border: 1px solid var(--border-light);
@@ -350,7 +391,15 @@
             letter-spacing: 2px;
         }
 
-        /* === SUCCESS STATE === */
+        .output-section.no-op .out-bit {
+            color: var(--text-dim);
+        }
+
+        .output-section.no-op .output-dec-value {
+            color: var(--text-dim);
+            text-shadow: none;
+        }
+
         .output-section.success {
             border-color: var(--green);
             box-shadow: 0 0 20px rgba(0, 255, 65, 0.1);
@@ -401,16 +450,15 @@
         @keyframes reveal {
             from {
                 opacity: 0;
-                transform: translateY(8px);
+                transform: translateY(8px)
             }
 
             to {
                 opacity: 1;
-                transform: translateY(0);
+                transform: translateY(0)
             }
         }
 
-        /* === FOOTER === */
         .footer {
             padding: 12px 16px;
             text-align: center;
@@ -421,7 +469,6 @@
             margin-top: auto;
         }
 
-        /* === RESPONSIVE === */
         @media (min-width: 420px) {
 
             .bit-cell,
@@ -438,12 +485,6 @@
                 font-size: 26px;
             }
         }
-
-        /* === BIT TRANSITION === */
-        .bit-cell.shifting {
-            color: var(--green-dark);
-            transition: color 0.05s;
-        }
     </style>
 </head>
 
@@ -455,164 +496,233 @@
         <div class="header-sub">Binary Decryption Unit v2.1 — 3-Rotor Configuration</div>
     </div>
 
-    <div class="status-bar">
+    <div class="status-bar" id="status-bar">
         <div class="status-dot"></div>
-        <span>SYSTEM READY — AWAITING CONFIGURATION</span>
+        <span>SYSTEM READY — SELECT OPERATION</span>
     </div>
 
     <div class="main">
-
-        <!-- ROTORS -->
         <div>
-            <div class="rotors-label">Rotori di ingresso</div>
-            <div class="rotor-group">
-                <div class="rotor-row" id="rotor-0">
-                    <div class="rotor-label">R1</div>
-                    <div class="rotor-display" id="display-0"></div>
-                    <div class="shift-count" id="shift-count-0">0</div>
-                    <div class="rotor-shift">
-                        <button class="shift-btn" onclick="shiftRotor(0, -1)" aria-label="Shift left">◀</button>
-                        <button class="shift-btn" onclick="shiftRotor(0, 1)" aria-label="Shift right">▶</button>
-                    </div>
-                </div>
-                <div class="rotor-row" id="rotor-1">
-                    <div class="rotor-label">R2</div>
-                    <div class="rotor-display" id="display-1"></div>
-                    <div class="shift-count" id="shift-count-1">0</div>
-                    <div class="rotor-shift">
-                        <button class="shift-btn" onclick="shiftRotor(1, -1)" aria-label="Shift left">◀</button>
-                        <button class="shift-btn" onclick="shiftRotor(1, 1)" aria-label="Shift right">▶</button>
-                    </div>
-                </div>
-                <div class="rotor-row" id="rotor-2">
-                    <div class="rotor-label">R3</div>
-                    <div class="rotor-display" id="display-2"></div>
-                    <div class="shift-count" id="shift-count-2">0</div>
-                    <div class="rotor-shift">
-                        <button class="shift-btn" onclick="shiftRotor(2, -1)" aria-label="Shift left">◀</button>
-                        <button class="shift-btn" onclick="shiftRotor(2, 1)" aria-label="Shift right">▶</button>
-                    </div>
-                </div>
+            <div class="section-label">Input rotors</div>
+            <div class="rotor-group" id="rotor-group">
+                <!-- Rotors built by JS -->
             </div>
         </div>
 
-        <!-- OPERATION -->
         <div class="op-section">
-            <div class="op-label">Operazione logica</div>
-            <div class="op-selector">
-                <button class="op-btn" onclick="setOp(0)" id="op-0">
-                    <span>AND</span>
-                    <span class="op-index">[0]</span>
+            <div class="section-label">Logical op</div>
+            <div class="op-selector" id="op-selector">
+                <button class="op-btn" data-op="0" id="op-0">
+                    <span>AND</span><span class="op-index">[0]</span>
                 </button>
-                <button class="op-btn" onclick="setOp(1)" id="op-1">
-                    <span>OR</span>
-                    <span class="op-index">[1]</span>
+                <button class="op-btn" data-op="1" id="op-1">
+                    <span>OR</span><span class="op-index">[1]</span>
                 </button>
-                <button class="op-btn active" onclick="setOp(2)" id="op-2">
-                    <span>XOR</span>
-                    <span class="op-index">[2]</span>
+                <button class="op-btn" data-op="2" id="op-2">
+                    <span>XOR</span><span class="op-index">[2]</span>
                 </button>
             </div>
         </div>
 
-        <!-- OUTPUT -->
-        <div class="output-section" id="output-section">
+        <div class="output-section no-op" id="output-section">
             <div class="output-label">Output</div>
             <div class="output-binary" id="output-bits"></div>
             <div class="output-decimal">
                 <span class="output-dec-label">DEC</span>
-                <span class="output-dec-value" id="output-dec">0000</span>
+                <span class="output-dec-value" id="output-dec">----</span>
             </div>
             <div class="bip39-result" id="bip39-result">
                 <div class="bip39-word" id="bip39-word"></div>
                 <div class="bip39-hint">BIP-39 #<span id="bip39-index"></span></div>
             </div>
         </div>
-
     </div>
 
-    <div class="footer">
-        0xC1PH3R DECRYPTION UNIT — CYPHERPUNK 2140
-    </div>
+    <div class="footer">0xC1PH3R DECRYPTION UNIT — CYPHERPUNK 2140</div>
 
     <script>
-        // === CONFIGURATION ===
         const BITS = 11;
-        const REGISTERS = [
-            0b10100011110,  // R1 = 1310
-            0b00011100101,  // R2 = 229
-            0b11011110001,  // R3 = 1777
-        ];
-        const TARGET = 1379; // "proof"
+        const REGISTERS = [0b10100011110, 0b00011100101, 0b11011110001];
+        const TARGET = 1379;
         const TARGET_WORD = "proof";
 
-        // BIP-39 list (loaded inline for offline use)
-        const BIP39_TARGET_INDEX = TARGET;
-        const BIP39_TARGET_WORD = TARGET_WORD;
-
-        // === STATE ===
         let shifts = [0, 0, 0];
-        let currentOp = 2; // XOR
+        let currentOp = -1;
 
-        // === INIT ===
+        // === BUILD UI ===
         function init() {
-            // Build bit displays
+            const group = document.getElementById('rotor-group');
+            group.innerHTML = '';
+
             for (let r = 0; r < 3; r++) {
-                const display = document.getElementById(`display-${r}`);
-                display.innerHTML = '';
-                for (let b = 0; b < BITS; b++) {
-                    const cell = document.createElement('div');
-                    cell.className = 'bit-cell';
-                    cell.id = `bit-${r}-${b}`;
-                    display.appendChild(cell);
+                // Rotor block
+                const block = document.createElement('div');
+                block.className = 'rotor-block';
+
+                // Row: label + bits + controls
+                const row = document.createElement('div');
+                row.className = 'rotor-row';
+                row.innerHTML = `
+      <div class="rotor-label">R${r + 1}</div>
+      <div class="rotor-display" id="display-${r}">
+        ${Array.from({ length: BITS }, (_, b) =>
+                    `<div class="bit-cell" id="bit-${r}-${b}">0</div>`
+                ).join('')}
+      </div>
+      <div class="rotor-controls">
+        <button class="shift-btn" data-rotor="${r}" data-dir="-1" aria-label="Shift left">◀</button>
+        <div class="shift-value" id="shift-val-${r}">0</div>
+        <button class="shift-btn" data-rotor="${r}" data-dir="1" aria-label="Shift right">▶</button>
+      </div>
+    `;
+                block.appendChild(row);
+
+                // Indicator pips
+                const indicator = document.createElement('div');
+                indicator.className = 'shift-indicator';
+                indicator.id = `indicator-${r}`;
+                for (let i = 0; i < BITS; i++) {
+                    const pip = document.createElement('div');
+                    pip.className = 'shift-pip' + (i === 0 ? ' zero-marker' : '');
+                    pip.id = `pip-${r}-${i}`;
+                    indicator.appendChild(pip);
                 }
+                block.appendChild(indicator);
+                group.appendChild(block);
             }
 
-            // Build output bits
+            // Swipe hint
+            const hint = document.createElement('div');
+            hint.className = 'swipe-hint';
+            hint.textContent = '◀ SWIPE ROTORS TO SHIFT ▶';
+            group.appendChild(hint);
+
+            // Output bits
             const outBits = document.getElementById('output-bits');
-            outBits.innerHTML = '';
-            for (let b = 0; b < BITS; b++) {
-                const cell = document.createElement('div');
-                cell.className = 'out-bit';
-                cell.id = `out-${b}`;
-                outBits.appendChild(cell);
-            }
+            outBits.innerHTML = Array.from({ length: BITS }, (_, b) =>
+                `<div class="out-bit" id="out-${b}">-</div>`
+            ).join('');
 
+            setupButtons();
+            setupSwipe();
+            updateIndicators();
             updateAll();
         }
 
-        // === CIRCULAR SHIFT RIGHT ===
+        // === BUTTONS ===
+        function setupButtons() {
+            document.querySelectorAll('.shift-btn').forEach(btn => {
+                btn.addEventListener('click', e => {
+                    e.preventDefault();
+                    shiftRotor(parseInt(btn.dataset.rotor), parseInt(btn.dataset.dir));
+                });
+            });
+            document.querySelectorAll('.op-btn').forEach(btn => {
+                btn.addEventListener('click', e => {
+                    e.preventDefault();
+                    setOp(parseInt(btn.dataset.op));
+                });
+            });
+        }
+
+        // === SWIPE ===
+        function setupSwipe() {
+            const THRESHOLD = 30;
+            for (let r = 0; r < 3; r++) {
+                const display = document.getElementById(`display-${r}`);
+                let startX = null, accum = 0;
+
+                display.addEventListener('touchstart', e => {
+                    startX = e.touches[0].clientX; accum = 0;
+                    display.classList.add('swiping');
+                }, { passive: true });
+
+                display.addEventListener('touchmove', e => {
+                    if (startX === null) return;
+                    e.preventDefault();
+                    const delta = e.touches[0].clientX - startX;
+                    const steps = Math.floor((delta - accum * THRESHOLD) / THRESHOLD);
+                    if (steps !== 0) {
+                        const dir = steps > 0 ? 1 : -1;
+                        for (let s = 0; s < Math.abs(steps); s++) shiftRotor(r, dir);
+                        accum += steps;
+                    }
+                }, { passive: false });
+
+                display.addEventListener('touchend', () => {
+                    startX = null; accum = 0; display.classList.remove('swiping');
+                }, { passive: true });
+
+                display.addEventListener('touchcancel', () => {
+                    startX = null; accum = 0; display.classList.remove('swiping');
+                }, { passive: true });
+
+                // Mouse for desktop testing
+                let mDown = false, mStartX = null, mAccum = 0;
+                display.addEventListener('mousedown', e => {
+                    mDown = true; mStartX = e.clientX; mAccum = 0;
+                    display.classList.add('swiping'); e.preventDefault();
+                });
+                document.addEventListener('mousemove', e => {
+                    if (!mDown) return;
+                    const delta = e.clientX - mStartX;
+                    const steps = Math.floor((delta - mAccum * THRESHOLD) / THRESHOLD);
+                    if (steps !== 0) {
+                        const dir = steps > 0 ? 1 : -1;
+                        for (let s = 0; s < Math.abs(steps); s++) shiftRotor(r, dir);
+                        mAccum += steps;
+                    }
+                });
+                document.addEventListener('mouseup', () => {
+                    if (mDown) { mDown = false; mStartX = null; mAccum = 0; display.classList.remove('swiping'); }
+                });
+            }
+        }
+
+        // === LOGIC ===
         function rotateRight(val, n) {
             n = ((n % BITS) + BITS) % BITS;
             return ((val >>> n) | (val << (BITS - n))) & ((1 << BITS) - 1);
         }
 
-        // === GET SHIFTED VALUE ===
-        function getShifted(regIndex) {
-            return rotateRight(REGISTERS[regIndex], shifts[regIndex]);
-        }
+        function getShifted(r) { return rotateRight(REGISTERS[r], shifts[r]); }
 
-        // === APPLY OPERATION ===
-        function applyOp(a, b) {
-            switch (currentOp) {
-                case 0: return a & b;
-                case 1: return a | b;
-                case 2: return a ^ b;
-            }
-        }
-
-        // === COMPUTE OUTPUT ===
         function computeOutput() {
-            let result = getShifted(0);
+            if (currentOp === -1) return null;
+            let res = getShifted(0);
             for (let r = 1; r < 3; r++) {
-                result = applyOp(result, getShifted(r));
+                switch (currentOp) {
+                    case 0: res = res & getShifted(r); break;
+                    case 1: res = res | getShifted(r); break;
+                    case 2: res = res ^ getShifted(r); break;
+                }
             }
-            return result;
+            return res;
         }
 
-        // === UPDATE DISPLAY ===
+        function shiftRotor(idx, dir) {
+            shifts[idx] = ((shifts[idx] + dir) % BITS + BITS) % BITS;
+            updateAll();
+        }
+
+        function setOp(op) {
+            currentOp = currentOp === op ? -1 : op;
+            document.querySelectorAll('.op-btn').forEach(btn =>
+                btn.classList.toggle('active', parseInt(btn.dataset.op) === currentOp)
+            );
+            updateAll();
+        }
+
+        function updateIndicators() {
+            for (let r = 0; r < 3; r++) {
+                for (let i = 0; i < BITS; i++) {
+                    document.getElementById(`pip-${r}-${i}`).classList.toggle('active', i === shifts[r]);
+                }
+            }
+        }
+
         function updateAll() {
-            // Update rotor displays
+            // Rotor bit displays
             for (let r = 0; r < 3; r++) {
                 const shifted = getShifted(r);
                 for (let b = 0; b < BITS; b++) {
@@ -621,62 +731,49 @@
                     cell.textContent = bit;
                     cell.classList.toggle('highlight', bit === 1);
                 }
-                document.getElementById(`shift-count-${r}`).textContent = shifts[r];
+                document.getElementById(`shift-val-${r}`).textContent = shifts[r];
             }
+            updateIndicators();
 
-            // Compute and display output
             const output = computeOutput();
-            for (let b = 0; b < BITS; b++) {
-                const bit = (output >> (BITS - 1 - b)) & 1;
-                document.getElementById(`out-${b}`).textContent = bit;
-            }
-
-            const decStr = String(output).padStart(4, '0');
-            document.getElementById('output-dec').textContent = decStr;
-
-            // Check for success
             const section = document.getElementById('output-section');
             const resultDiv = document.getElementById('bip39-result');
+            const statusBar = document.getElementById('status-bar');
+
+            if (output === null) {
+                for (let b = 0; b < BITS; b++) document.getElementById(`out-${b}`).textContent = '-';
+                document.getElementById('output-dec').textContent = '----';
+                section.className = 'output-section no-op';
+                resultDiv.classList.remove('visible');
+                statusBar.innerHTML =
+                    '<div class="status-dot"></div><span>SYSTEM READY — SELECT OPERATION</span>';
+                return;
+            }
+
+            section.classList.remove('no-op');
+            for (let b = 0; b < BITS; b++) {
+                document.getElementById(`out-${b}`).textContent = (output >> (BITS - 1 - b)) & 1;
+            }
+            document.getElementById('output-dec').textContent = String(output).padStart(4, '0');
 
             if (output === TARGET) {
-                section.classList.add('success');
+                section.className = 'output-section success';
                 resultDiv.classList.add('visible');
-                document.getElementById('bip39-word').textContent = BIP39_TARGET_WORD;
+                document.getElementById('bip39-word').textContent = TARGET_WORD;
                 document.getElementById('bip39-index').textContent = TARGET;
-                document.querySelector('.status-bar').innerHTML =
+                statusBar.innerHTML =
                     '<div class="status-dot" style="background:var(--green);box-shadow:0 0 6px var(--green)"></div>' +
                     '<span style="color:var(--green)">DECRYPTION COMPLETE — WORD RECOVERED</span>';
             } else {
-                section.classList.remove('success');
+                section.className = 'output-section';
                 resultDiv.classList.remove('visible');
-                document.querySelector('.status-bar').innerHTML =
-                    '<div class="status-dot"></div>' +
-                    '<span>SYSTEM READY — AWAITING CONFIGURATION</span>';
+                statusBar.innerHTML =
+                    '<div class="status-dot"></div><span>SYSTEM READY — AWAITING CONFIGURATION</span>';
             }
         }
 
-        // === SHIFT ROTOR ===
-        function shiftRotor(index, direction) {
-            shifts[index] = ((shifts[index] + direction) % BITS + BITS) % BITS;
-            updateAll();
-        }
-
-        // === SET OPERATION ===
-        function setOp(op) {
-            currentOp = op;
-            document.querySelectorAll('.op-btn').forEach((btn, i) => {
-                btn.classList.toggle('active', i === op);
-            });
-            updateAll();
-        }
-
-        // === TOUCH HANDLING FOR BUTTONS ===
-        document.addEventListener('touchstart', function () { }, { passive: true });
-
-        // === GO ===
         init();
     </script>
-
 </body>
 
 </html>
