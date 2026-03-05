@@ -1,0 +1,1416 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HASH-MINE — Cypherpunk 2140</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Share+Tech+Mono&family=VT323&display=swap');
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg: #0a0a0a;
+            --green: #00ff41;
+            --green-dim: #00cc33;
+            --green-dark: #003300;
+            --amber: #ffb000;
+            --amber-dim: #996a00;
+            --red: #ff2244;
+            --red-dim: #661122;
+            --white: #e0e0e0;
+            --panel-bg: #0f0f0f;
+            --panel-border: #1a3a1a;
+            --font-mono: 'JetBrains Mono', 'Share Tech Mono', monospace;
+            --font-display: 'VT323', monospace;
+        }
+
+        html,
+        body {
+            background: var(--bg);
+            color: var(--green);
+            font-family: var(--font-mono);
+            font-size: 14px;
+            min-height: 100dvh;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, 0.15) 2px, rgba(0, 0, 0, 0.15) 4px);
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        .container {
+            max-width: 420px;
+            margin: 0 auto;
+            padding: 12px;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── Header ── */
+        .header {
+            text-align: center;
+            padding: 8px 0 10px;
+            border-bottom: 1px solid var(--panel-border);
+            margin-bottom: 10px;
+        }
+
+        .header-title {
+            font-family: var(--font-display);
+            font-size: 28px;
+            color: var(--amber);
+            letter-spacing: 3px;
+            text-shadow: 0 0 10px rgba(255, 176, 0, 0.4);
+        }
+
+        .header-sub {
+            font-size: 10px;
+            color: var(--green-dim);
+            letter-spacing: 2px;
+            margin-top: 2px;
+        }
+
+        .module-leds {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin-top: 8px;
+        }
+
+        .module-led {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .module-led .led {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 1px solid #333;
+            background: #111;
+            transition: all 0.3s;
+        }
+
+        .module-led .led.active {
+            background: var(--amber);
+            box-shadow: 0 0 8px rgba(255, 176, 0, 0.6);
+            border-color: var(--amber-dim);
+        }
+
+        .module-led .led.completed {
+            background: var(--green);
+            box-shadow: 0 0 8px rgba(0, 255, 65, 0.6);
+            border-color: var(--green-dim);
+        }
+
+        .module-led .led-label {
+            font-size: 9px;
+            color: #555;
+            letter-spacing: 1px;
+        }
+
+        .module-led .led-label.active {
+            color: var(--amber);
+        }
+
+        .module-led .led-label.completed {
+            color: var(--green-dim);
+        }
+
+        /* ── Globals panel ── */
+        .globals-panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 4px;
+            padding: 8px 10px;
+            margin-bottom: 10px;
+        }
+
+        .globals-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .globals-row+.globals-row {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #1a1a1a;
+        }
+
+        .globals-section {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .globals-label {
+            font-size: 8px;
+            color: var(--amber-dim);
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .power-cells {
+            display: flex;
+            gap: 5px;
+        }
+
+        .power-cell {
+            width: 18px;
+            height: 28px;
+            border: 1px solid var(--green-dark);
+            border-radius: 2px;
+            background: linear-gradient(180deg, #0a1a0a, #001100);
+            position: relative;
+        }
+
+        .power-cell.active {
+            border-color: var(--green-dim);
+            background: linear-gradient(180deg, #0a2a0a, #003300);
+        }
+
+        .power-cell.active::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            right: 3px;
+            bottom: 3px;
+            background: var(--green);
+            opacity: 0.3;
+            border-radius: 1px;
+        }
+
+        .power-cell-tip {
+            position: absolute;
+            top: -3px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 10px;
+            height: 4px;
+            background: #333;
+            border-radius: 1px 1px 0 0;
+        }
+
+        .power-cell.active .power-cell-tip {
+            background: var(--green-dim);
+        }
+
+        .network-nodes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .network-node {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            padding: 2px 5px;
+            border: 1px solid #222;
+            border-radius: 2px;
+            background: #0c0c0c;
+        }
+
+        .network-node .node-led {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #222;
+            border: 1px solid #333;
+        }
+
+        .network-node.active .node-led {
+            background: var(--green);
+            box-shadow: 0 0 4px rgba(0, 255, 65, 0.5);
+        }
+
+        .network-node .node-label {
+            font-size: 9px;
+            color: #555;
+            letter-spacing: 1px;
+        }
+
+        .network-node.active .node-label {
+            color: var(--green-dim);
+        }
+
+        .serial-value {
+            font-family: var(--font-display);
+            font-size: 20px;
+            color: var(--green);
+            letter-spacing: 2px;
+            text-shadow: 0 0 6px rgba(0, 255, 65, 0.3);
+        }
+
+        .data-ports {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .data-port {
+            padding: 2px 5px;
+            border: 1px solid #222;
+            border-radius: 2px;
+            background: #0c0c0c;
+            font-size: 8px;
+            color: #555;
+            letter-spacing: 1px;
+        }
+
+        .data-port.present {
+            border-color: var(--green-dark);
+            color: var(--green-dim);
+            background: #0a1a0a;
+        }
+
+        /* ── Puzzle area ── */
+        .puzzle-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .puzzle-screen {
+            display: none;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .puzzle-screen.active {
+            display: flex;
+        }
+
+        /* ═══ GLOBAL TIMER ═══ */
+        .global-timer {
+            text-align: center;
+            padding: 6px 0;
+            margin-bottom: 8px;
+            border: 1px solid var(--panel-border);
+            border-radius: 4px;
+            background: var(--panel-bg);
+        }
+
+        .timer-display {
+            font-family: var(--font-display);
+            font-size: 48px;
+            color: var(--red);
+            text-shadow: 0 0 15px rgba(255, 34, 68, 0.5);
+            letter-spacing: 4px;
+        }
+
+        .global-timer.urgent .timer-display {
+            animation: timer-blink 0.5s step-end infinite;
+        }
+
+        @keyframes timer-blink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.3;
+            }
+        }
+
+        /* ═══ PUZZLE 1: THE BUTTON ═══ */
+        .p1-button-area {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+            padding: 20px 0;
+        }
+
+        .big-button {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            border: 3px solid;
+            font-family: var(--font-mono);
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-shadow: 0 0 8px currentColor;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        .big-button:active {
+            transform: scale(0.95);
+        }
+
+        .big-button.color-blue {
+            background: radial-gradient(circle at 40% 35%, #2266cc, #0a1a44);
+            border-color: #3388ee;
+            color: #aaccff;
+            box-shadow: 0 0 20px rgba(34, 102, 204, 0.3), inset 0 -4px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        .big-button.color-white {
+            background: radial-gradient(circle at 40% 35%, #cccccc, #444444);
+            border-color: #dddddd;
+            color: #111;
+            text-shadow: none;
+            box-shadow: 0 0 20px rgba(200, 200, 200, 0.2), inset 0 -4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .big-button.color-yellow {
+            background: radial-gradient(circle at 40% 35%, #ccaa00, #443300);
+            border-color: #ddbb22;
+            color: #ffee88;
+            box-shadow: 0 0 20px rgba(204, 170, 0, 0.3), inset 0 -4px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        .big-button.color-red {
+            background: radial-gradient(circle at 40% 35%, #cc2222, #440a0a);
+            border-color: #ee3333;
+            color: #ffaaaa;
+            box-shadow: 0 0 20px rgba(204, 34, 34, 0.3), inset 0 -4px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        .strip-container {
+            width: 24px;
+            height: 100px;
+            border: 1px solid #333;
+            border-radius: 3px;
+            background: #111;
+            overflow: hidden;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .strip-light {
+            position: absolute;
+            inset: 2px;
+            border-radius: 2px;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+
+        .strip-light.on {
+            opacity: 1;
+            animation: strip-pulse 0.8s ease-in-out infinite alternate;
+        }
+
+        @keyframes strip-pulse {
+            from {
+                opacity: 0.7;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* ═══ PUZZLE 2: COMPLEX WIRES ═══ */
+        .p2-wires-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: stretch;
+            gap: 6px;
+            padding: 12px 4px;
+        }
+
+        .wire-column {
+            flex: 1;
+            max-width: 72px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        .wire-led {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 1px solid #333;
+            background: #111;
+            margin-bottom: 4px;
+            flex-shrink: 0;
+        }
+
+        .wire-led.lit {
+            background: var(--green);
+            box-shadow: 0 0 8px rgba(0, 255, 65, 0.6);
+            border-color: var(--green-dim);
+        }
+
+        .wire-body-wrapper {
+            flex: 1;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            position: relative;
+            min-height: 120px;
+        }
+
+        .wire-body {
+            width: 14px;
+            border-radius: 7px;
+            position: relative;
+            transition: opacity 0.3s;
+        }
+
+        .wire-body.color-none {
+            background: linear-gradient(180deg, #888, #666, #888);
+            box-shadow: inset -2px 0 4px rgba(0, 0, 0, 0.3), inset 2px 0 4px rgba(255, 255, 255, 0.05);
+        }
+
+        .wire-body.color-red {
+            background: linear-gradient(180deg, #cc3333, #aa1111, #cc3333);
+            box-shadow: inset -2px 0 4px rgba(0, 0, 0, 0.3), 0 0 6px rgba(204, 51, 51, 0.2);
+        }
+
+        .wire-body.color-blue {
+            background: linear-gradient(180deg, #3366cc, #1144aa, #3366cc);
+            box-shadow: inset -2px 0 4px rgba(0, 0, 0, 0.3), 0 0 6px rgba(51, 102, 204, 0.2);
+        }
+
+        .wire-body.color-redblue {
+            background: repeating-linear-gradient(-45deg, #cc3333, #cc3333 4px, #3366cc 4px, #3366cc 8px);
+            box-shadow: inset -2px 0 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .wire-column.cut .wire-body {
+            opacity: 0;
+        }
+
+        .wire-cut-top,
+        .wire-cut-bottom {
+            display: none;
+            position: absolute;
+            width: 14px;
+            border-radius: 7px;
+            left: 50%;
+            pointer-events: none;
+        }
+
+        .wire-cut-top {
+            top: 0;
+            height: 42%;
+            transform: translateX(-50%) rotate(3deg);
+        }
+
+        .wire-cut-bottom {
+            bottom: 0;
+            height: 42%;
+            transform: translateX(-50%) rotate(-3deg);
+        }
+
+        .wire-column.cut .wire-cut-top,
+        .wire-column.cut .wire-cut-bottom {
+            display: block;
+        }
+
+        .wire-star {
+            height: 20px;
+            margin-top: 4px;
+            font-size: 18px;
+            line-height: 20px;
+            text-align: center;
+            flex-shrink: 0;
+            color: #333;
+        }
+
+        .wire-star.present {
+            color: var(--amber);
+            text-shadow: 0 0 6px rgba(255, 176, 0, 0.4);
+        }
+
+        .wire-cut-btn {
+            margin-top: 6px;
+            padding: 6px 2px;
+            width: 100%;
+            border: 1px solid #333;
+            border-radius: 3px;
+            background: #151515;
+            color: #666;
+            font-family: var(--font-mono);
+            font-size: 9px;
+            letter-spacing: 1px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.15s;
+            flex-shrink: 0;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        .wire-cut-btn:active {
+            background: #2a0a0a;
+            border-color: var(--red-dim);
+            color: var(--red);
+        }
+
+        .wire-column.cut .wire-cut-btn {
+            border-color: var(--green-dark);
+            color: var(--green-dark);
+            pointer-events: none;
+        }
+
+        /* ═══ PUZZLE 3: PASSWORD ═══ */
+        .p3-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            padding: 12px 0;
+        }
+
+        .p3-slots {
+            display: flex;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .p3-slot {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 52px;
+        }
+
+        .p3-arrow {
+            width: 44px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #333;
+            border-radius: 3px;
+            background: #151515;
+            color: #666;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.12s;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        .p3-arrow:active {
+            background: #1a2a1a;
+            border-color: var(--green-dark);
+            color: var(--green-dim);
+        }
+
+        .p3-letter-display {
+            width: 48px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--green-dark);
+            border-radius: 2px;
+            background: #0a150a;
+            font-family: var(--font-display);
+            font-size: 40px;
+            color: var(--green);
+            text-shadow: 0 0 8px rgba(0, 255, 65, 0.4);
+            margin: 3px 0;
+            text-transform: uppercase;
+        }
+
+        .p3-submit-btn {
+            padding: 12px 48px;
+            border: 1px solid var(--green-dark);
+            border-radius: 4px;
+            background: #0a1a0a;
+            color: var(--green-dim);
+            font-family: var(--font-mono);
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 3px;
+            cursor: pointer;
+            transition: all 0.15s;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        .p3-submit-btn:active {
+            background: #0a2a0a;
+            border-color: var(--green);
+            color: var(--green);
+            box-shadow: 0 0 12px rgba(0, 255, 65, 0.3);
+        }
+
+        /* ── Feedback ── */
+        .feedback-overlay {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .feedback-overlay.show {
+            opacity: 1;
+        }
+
+        .feedback-overlay.error {
+            background: rgba(255, 0, 0, 0.1);
+        }
+
+        .feedback-overlay.success {
+            background: rgba(0, 255, 65, 0.1);
+        }
+
+        .feedback-text {
+            font-family: var(--font-display);
+            font-size: 48px;
+            letter-spacing: 4px;
+        }
+
+        .feedback-overlay.error .feedback-text {
+            color: var(--red);
+            text-shadow: 0 0 30px rgba(255, 34, 68, 0.8);
+            animation: shake 0.4s;
+        }
+
+        .feedback-overlay.success .feedback-text {
+            color: var(--green);
+            text-shadow: 0 0 30px rgba(0, 255, 65, 0.8);
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            20% {
+                transform: translateX(-12px);
+            }
+
+            40% {
+                transform: translateX(12px);
+            }
+
+            60% {
+                transform: translateX(-8px);
+            }
+
+            80% {
+                transform: translateX(8px);
+            }
+        }
+
+        /* ── Reveal ── */
+        .reveal-screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            gap: 16px;
+        }
+
+        .reveal-screen.active {
+            display: flex;
+        }
+
+        .reveal-word {
+            font-family: var(--font-display);
+            font-size: 72px;
+            color: var(--green);
+            text-shadow: 0 0 30px rgba(0, 255, 65, 0.8), 0 0 60px rgba(0, 255, 65, 0.4);
+            letter-spacing: 8px;
+            animation: glow-pulse 2s ease-in-out infinite alternate;
+        }
+
+        .reveal-label {
+            font-size: 11px;
+            color: var(--amber-dim);
+            letter-spacing: 3px;
+        }
+
+        .reveal-number {
+            font-family: var(--font-display);
+            font-size: 24px;
+            color: var(--amber);
+            text-shadow: 0 0 10px rgba(255, 176, 0, 0.4);
+        }
+
+        @keyframes glow-pulse {
+            from {
+                text-shadow: 0 0 20px rgba(0, 255, 65, 0.6), 0 0 40px rgba(0, 255, 65, 0.3);
+            }
+
+            to {
+                text-shadow: 0 0 40px rgba(0, 255, 65, 0.9), 0 0 80px rgba(0, 255, 65, 0.5);
+            }
+        }
+
+        /* ── Status ── */
+        .status-bar {
+            text-align: center;
+            padding: 6px 0;
+            border-top: 1px solid var(--panel-border);
+            margin-top: 8px;
+        }
+
+        .status-text {
+            font-size: 10px;
+            color: #444;
+            letter-spacing: 1.5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-title">HASH-MINE</div>
+            <div class="header-sub">// DEFUSAL PROTOCOL v6.1 //</div>
+            <div class="module-leds">
+                <div class="module-led">
+                    <div class="led active" id="led1"></div>
+                    <div class="led-label active" id="ledLabel1">MOD-α</div>
+                </div>
+                <div class="module-led">
+                    <div class="led" id="led2"></div>
+                    <div class="led-label" id="ledLabel2">MOD-β</div>
+                </div>
+                <div class="module-led">
+                    <div class="led" id="led3"></div>
+                    <div class="led-label" id="ledLabel3">MOD-γ</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Global timer -->
+        <div class="global-timer" id="globalTimer">
+            <div class="timer-display" id="timerDisplay">05:00</div>
+        </div>
+
+        <div class="globals-panel">
+            <div class="globals-row">
+                <div class="globals-section">
+                    <div class="globals-label">Power cells</div>
+                    <div class="power-cells" id="powerCells"></div>
+                </div>
+                <div class="globals-section">
+                    <div class="globals-label">Network nodes</div>
+                    <div class="network-nodes" id="networkNodes"></div>
+                </div>
+            </div>
+            <div class="globals-row">
+                <div class="globals-section">
+                    <div class="globals-label">Device serial</div>
+                    <div class="serial-value" id="serialValue"></div>
+                </div>
+                <div class="globals-section">
+                    <div class="globals-label">Data ports</div>
+                    <div class="data-ports" id="dataPorts"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="puzzle-area">
+            <div class="puzzle-screen active" id="puzzle1">
+                <div class="p1-button-area">
+                    <div class="big-button" id="bigButton"></div>
+                    <div class="strip-container">
+                        <div class="strip-light" id="stripLight"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="puzzle-screen" id="puzzle2">
+                <div class="p2-wires-container" id="wiresContainer"></div>
+            </div>
+            <div class="puzzle-screen" id="puzzle3">
+                <div class="p3-container">
+                    <div class="p3-slots" id="p3Slots"></div>
+                    <div class="p3-submit-btn" id="p3Submit">SUBMIT</div>
+                </div>
+            </div>
+            <div class="reveal-screen" id="revealScreen">
+                <div class="reveal-label">SEED WORD RECOVERED</div>
+                <div class="reveal-word" id="revealWord"></div>
+                <div class="reveal-label">BIP-39 INDEX</div>
+                <div class="reveal-number" id="revealNumber"></div>
+            </div>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-text" id="statusText">MODULE α ACTIVE — AWAITING INPUT</div>
+        </div>
+        <div class="feedback-overlay" id="feedback">
+            <div class="feedback-text" id="feedbackText"></div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            'use strict';
+
+            // ── CONFIGURAZIONE ──
+            var TIMER_SECONDS = 300; // 5 minuti — modificare qui per cambiare la durata
+
+            var FINAL_WORD = atob('REFOQ0U=');
+            var FINAL_INDEX = 443;
+            var SESSION_SEED = Math.floor(Math.random() * 2147483647);
+
+            function mulberry32(seed) {
+                return function () {
+                    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+                    var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+                    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+                    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+                };
+            }
+            var rng = mulberry32(SESSION_SEED);
+            function randInt(min, max) { return min + Math.floor(rng() * (max - min + 1)); }
+
+            var state = { currentPuzzle: 1, tokens: [null, null, null], completed: [false, false, false] };
+
+            // ── GLOBALS ──
+            var NODE_POOL = ['CAR', 'FRK', 'SIG', 'CLK', 'NSA', 'TOR', 'IND'];
+            var PORT_POOL = ['PARALLEL', 'SERIAL', 'RJ-45', 'DVI', 'PS/2', 'STEREO'];
+            var ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+
+            var globals = { powerCellCount: randInt(0, 4), nodes: [], serial: '', serialLastDigit: 0, ports: [], hasParallel: false };
+
+            // Nodes
+            var nc = randInt(2, 4);
+            var sn = NODE_POOL.slice().sort(function () { return rng() - 0.5; });
+            for (var i = 0; i < nc; i++) globals.nodes.push({ label: sn[i], active: rng() > 0.5 });
+            if (!globals.nodes.some(function (n) { return n.label === 'CAR'; })) globals.nodes[0].label = 'CAR';
+            if (!globals.nodes.some(function (n) { return n.label === 'FRK'; }) && globals.nodes.length > 1) globals.nodes[globals.nodes.length - 1].label = 'FRK';
+
+            // Serial
+            globals.serialLastDigit = Math.floor(rng() * 10);
+            globals.serial = ALPHA[Math.floor(rng() * ALPHA.length)] + Math.floor(rng() * 10) + ALPHA[Math.floor(rng() * ALPHA.length)] + Math.floor(rng() * 10) + globals.serialLastDigit;
+
+            // Ports
+            var pc = randInt(2, 4);
+            var sp = PORT_POOL.slice().sort(function () { return rng() - 0.5; });
+            for (var i = 0; i < pc; i++) {
+                var pr = rng() > 0.4;
+                globals.ports.push({ label: sp[i], present: pr });
+                if (sp[i] === 'PARALLEL' && pr) globals.hasParallel = true;
+            }
+            if (!globals.ports.some(function (p) { return p.label === 'PARALLEL'; })) {
+                var pr = rng() > 0.5;
+                globals.ports[0] = { label: 'PARALLEL', present: pr };
+                if (pr) globals.hasParallel = true;
+            }
+
+            function renderGlobals() {
+                var cellsEl = document.getElementById('powerCells'); cellsEl.innerHTML = '';
+                for (var i = 0; i < 4; i++) {
+                    var c = document.createElement('div');
+                    c.className = 'power-cell' + (i < globals.powerCellCount ? ' active' : '');
+                    c.innerHTML = '<div class="power-cell-tip"></div>';
+                    cellsEl.appendChild(c);
+                }
+                var nodesEl = document.getElementById('networkNodes'); nodesEl.innerHTML = '';
+                globals.nodes.forEach(function (n) {
+                    var el = document.createElement('div');
+                    el.className = 'network-node' + (n.active ? ' active' : '');
+                    el.innerHTML = '<div class="node-led"></div><span class="node-label">' + n.label + '</span>';
+                    nodesEl.appendChild(el);
+                });
+                document.getElementById('serialValue').textContent = globals.serial;
+                var portsEl = document.getElementById('dataPorts'); portsEl.innerHTML = '';
+                globals.ports.forEach(function (p) {
+                    var el = document.createElement('div');
+                    el.className = 'data-port' + (p.present ? ' present' : '');
+                    el.textContent = p.label;
+                    portsEl.appendChild(el);
+                });
+            }
+
+            // ── TIMER ──
+            var timerValue = 0, timerInterval = null;
+            function startTimer() {
+                timerValue = TIMER_SECONDS;
+                updateTimerDisplay();
+                if (timerInterval) clearInterval(timerInterval);
+                timerInterval = setInterval(function () {
+                    timerValue--;
+                    if (timerValue < 0) { fullReset(); return; }
+                    updateTimerDisplay();
+                }, 1000);
+            }
+            function updateTimerDisplay() {
+                var m = Math.floor(timerValue / 60), s = timerValue % 60;
+                document.getElementById('timerDisplay').textContent = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+                var timerEl = document.getElementById('globalTimer');
+                if (timerValue <= 60) {
+                    timerEl.classList.add('urgent');
+                } else {
+                    timerEl.classList.remove('urgent');
+                }
+            }
+            function getTimerDigits() {
+                var m = Math.floor(timerValue / 60), s = timerValue % 60;
+                return (String(m).padStart(2, '0') + String(s).padStart(2, '0')).split('').map(Number);
+            }
+
+            // ── PUZZLE 1: THE BUTTON ──
+            var BUTTON_COLORS = ['blue', 'white', 'yellow', 'red'];
+            var BUTTON_LABELS = ['ABORT', 'DETONATE', 'HOLD', 'PRESS'];
+            var STRIP_COLORS = ['blue', 'white', 'yellow', 'red', 'green', 'magenta'];
+            var STRIP_CSS = {
+                blue: 'background:#2266ff;box-shadow:0 0 12px rgba(34,102,255,0.8)',
+                white: 'background:#ddd;box-shadow:0 0 12px rgba(220,220,220,0.8)',
+                yellow: 'background:#ddbb00;box-shadow:0 0 12px rgba(220,187,0,0.8)',
+                red: 'background:#ee2233;box-shadow:0 0 12px rgba(238,34,51,0.8)',
+                green: 'background:#00cc44;box-shadow:0 0 12px rgba(0,204,68,0.8)',
+                magenta: 'background:#cc44cc;box-shadow:0 0 12px rgba(204,68,204,0.8)'
+            };
+            var p1 = {};
+
+            function nodeIsLit(label) { var n = globals.nodes.find(function (x) { return x.label === label; }); return n ? n.active : false; }
+
+            function generateP1() {
+                p1.buttonColor = BUTTON_COLORS[Math.floor(Math.random() * BUTTON_COLORS.length)];
+                p1.buttonLabel = BUTTON_LABELS[Math.floor(Math.random() * BUTTON_LABELS.length)];
+                p1.stripColor = STRIP_COLORS[Math.floor(Math.random() * STRIP_COLORS.length)];
+                p1.expectedAction = determineP1Action();
+                p1.holdActive = false; p1.pressStart = 0;
+                renderP1();
+            }
+
+            function determineP1Action() {
+                if (p1.buttonColor === 'blue' && p1.buttonLabel === 'ABORT') return 'hold';
+                if (globals.powerCellCount > 1 && p1.buttonLabel === 'DETONATE') return 'tap';
+                if (p1.buttonColor === 'white' && nodeIsLit('CAR')) return 'hold';
+                if (globals.powerCellCount > 2 && nodeIsLit('FRK')) return 'tap';
+                if (p1.buttonColor === 'yellow') return 'hold';
+                if (p1.buttonColor === 'red' && p1.buttonLabel === 'HOLD') return 'tap';
+                return 'hold';
+            }
+
+            function getRequiredDigit() {
+                if (p1.stripColor === 'blue') return 4;
+                if (p1.stripColor === 'white') return 1;
+                if (p1.stripColor === 'yellow') return 5;
+                return 1;
+            }
+
+            function renderP1() {
+                var btn = document.getElementById('bigButton');
+                btn.className = 'big-button color-' + p1.buttonColor;
+                btn.textContent = p1.buttonLabel;
+                var strip = document.getElementById('stripLight');
+                strip.className = 'strip-light'; strip.style.cssText = '';
+            }
+
+            function setupP1Interaction() {
+                var btn = document.getElementById('bigButton');
+                var HOLD_THRESHOLD = 500;
+
+                function onStart(e) {
+                    e.preventDefault();
+                    if (state.currentPuzzle !== 1 || state.completed[0]) return;
+                    p1.pressStart = Date.now(); p1.holdActive = false;
+                    p1.holdTimer = setTimeout(function () {
+                        p1.holdActive = true;
+                        var strip = document.getElementById('stripLight');
+                        strip.style.cssText = STRIP_CSS[p1.stripColor];
+                        strip.className = 'strip-light on';
+                    }, HOLD_THRESHOLD);
+                }
+
+                function onEnd(e) {
+                    e.preventDefault();
+                    if (state.currentPuzzle !== 1 || state.completed[0]) return;
+                    clearTimeout(p1.holdTimer);
+                    var wasHold = p1.holdActive;
+                    var strip = document.getElementById('stripLight');
+                    strip.className = 'strip-light'; strip.style.cssText = '';
+                    if (p1.expectedAction === 'tap') { wasHold ? onP1Fail() : onP1Success(); }
+                    else {
+                        if (!wasHold) { onP1Fail(); return; }
+                        getTimerDigits().includes(getRequiredDigit()) ? onP1Success() : onP1Fail();
+                    }
+                }
+
+                btn.addEventListener('touchstart', onStart, { passive: false });
+                btn.addEventListener('touchend', onEnd, { passive: false });
+                btn.addEventListener('touchcancel', onEnd, { passive: false });
+                btn.addEventListener('mousedown', onStart);
+                btn.addEventListener('mouseup', onEnd);
+                btn.addEventListener('mouseleave', function () {
+                    if (p1.holdActive) {
+                        clearTimeout(p1.holdTimer);
+                        var s = document.getElementById('stripLight');
+                        s.className = 'strip-light'; s.style.cssText = '';
+                        p1.holdActive = false;
+                    }
+                });
+            }
+
+            function onP1Success() {
+                state.completed[0] = true;
+                state.tokens[0] = SESSION_SEED ^ 0x50315A5A;
+                showFeedback('success', 'DISARMED');
+                document.getElementById('led1').className = 'led completed';
+                document.getElementById('ledLabel1').className = 'led-label completed';
+                setTimeout(function () { transitionToPuzzle(2); }, 1200);
+            }
+
+            function onP1Fail() {
+                showFeedback('error', 'ERROR');
+                setTimeout(function () { fullReset(); }, 600);
+            }
+
+            // ── PUZZLE 2: COMPLEX WIRES ──
+            // Truth table: key = [red][blue][star][led]
+            var WIRE_TABLE = {
+                '0000': 'T', '0001': 'N', '0010': 'T', '0011': 'B',
+                '0100': 'S', '0101': 'P', '0110': 'N', '0111': 'P',
+                '1000': 'S', '1001': 'B', '1010': 'T', '1011': 'B',
+                '1100': 'S', '1101': 'S', '1110': 'P', '1111': 'N'
+            };
+
+            function resolveWireAction(letter) {
+                switch (letter) {
+                    case 'T': return true;
+                    case 'N': return false;
+                    case 'S': return globals.serialLastDigit % 2 === 0;
+                    case 'P': return globals.hasParallel;
+                    case 'B': return globals.powerCellCount >= 2;
+                }
+                return false;
+            }
+
+            var p2 = { wires: [], cutCount: 0, shouldCutCount: 0 };
+
+            function generateP2() {
+                var count = 4 + Math.floor(Math.random() * 3);
+                p2.wires = []; p2.cutCount = 0; p2.shouldCutCount = 0;
+                for (var i = 0; i < count; i++) {
+                    var red = Math.random() > 0.5, blue = Math.random() > 0.5;
+                    var star = Math.random() > 0.5, led = Math.random() > 0.5;
+                    var key = (red ? '1' : '0') + (blue ? '1' : '0') + (star ? '1' : '0') + (led ? '1' : '0');
+                    var letter = WIRE_TABLE[key];
+                    var shouldCut = resolveWireAction(letter);
+                    p2.wires.push({ red: red, blue: blue, star: star, led: led, shouldCut: shouldCut, isCut: false });
+                    if (shouldCut) p2.shouldCutCount++;
+                }
+                if (p2.shouldCutCount === 0) return generateP2();
+                renderP2();
+            }
+
+            function wireColorClass(w) {
+                if (w.red && w.blue) return 'color-redblue';
+                if (w.red) return 'color-red';
+                if (w.blue) return 'color-blue';
+                return 'color-none';
+            }
+
+            function renderP2() {
+                var container = document.getElementById('wiresContainer');
+                container.innerHTML = '';
+                p2.wires.forEach(function (wire, i) {
+                    var col = document.createElement('div');
+                    col.className = 'wire-column'; col.dataset.index = i;
+                    var cc = wireColorClass(wire);
+                    col.innerHTML =
+                        '<div class="wire-led' + (wire.led ? ' lit' : '') + '"></div>' +
+                        '<div class="wire-body-wrapper">' +
+                        '<div class="wire-body ' + cc + '"></div>' +
+                        '<div class="wire-cut-top ' + cc + '"></div>' +
+                        '<div class="wire-cut-bottom ' + cc + '"></div>' +
+                        '</div>' +
+                        '<div class="wire-star' + (wire.star ? ' present' : '') + '">' +
+                        (wire.star ? '★' : '☆') +
+                        '</div>' +
+                        '<div class="wire-cut-btn">CUT</div>';
+                    container.appendChild(col);
+                });
+                container.querySelectorAll('.wire-cut-btn').forEach(function (btn) {
+                    btn.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        if (state.currentPuzzle !== 2 || state.completed[1]) return;
+                        var col = this.closest('.wire-column');
+                        var idx = parseInt(col.dataset.index);
+                        onWireCut(idx, col);
+                    });
+                });
+            }
+
+            function onWireCut(idx, colEl) {
+                var wire = p2.wires[idx];
+                if (wire.isCut) return;
+                if (wire.shouldCut) {
+                    wire.isCut = true;
+                    colEl.classList.add('cut');
+                    p2.cutCount++;
+                    if (p2.cutCount >= p2.shouldCutCount) onP2Success();
+                } else {
+                    onP2Fail();
+                }
+            }
+
+            function onP2Success() {
+                state.completed[1] = true;
+                state.tokens[1] = (state.tokens[0] || 0) ^ 0x50325A5A;
+                showFeedback('success', 'DISARMED');
+                document.getElementById('led2').className = 'led completed';
+                document.getElementById('ledLabel2').className = 'led-label completed';
+                setTimeout(function () { transitionToPuzzle(3); }, 1200);
+            }
+
+            function onP2Fail() {
+                showFeedback('error', 'ERROR');
+                setTimeout(function () { fullReset(); }, 600);
+            }
+
+            // ── PUZZLE 3: PASSWORD ──
+            var P3_WORDS = [
+                'about', 'above', 'again', 'alpha', 'arena', 'birth', 'black', 'brain', 'catch', 'chalk',
+                'clean', 'crane', 'dance', 'equal', 'fault', 'floor', 'grace', 'guard', 'ivory', 'knife',
+                'large', 'magic', 'metal', 'nurse', 'other', 'peace', 'place', 'power', 'right', 'scale',
+                'skull', 'space', 'stone', 'thing', 'world'
+            ];
+
+            var p3 = { target: '', slots: [], currentIndex: [] };
+
+            function generateP3() {
+                // Pick random target
+                p3.target = P3_WORDS[Math.floor(Math.random() * P3_WORDS.length)];
+                p3.slots = [];
+                p3.currentIndex = [0, 0, 0, 0, 0];
+
+                // For each position, build a set of 6 letters
+                for (var pos = 0; pos < 5; pos++) {
+                    var correct = p3.target[pos];
+                    var pool = [correct];
+
+                    // Collect letters from other words at this position (create false leads)
+                    var otherLetters = [];
+                    for (var w = 0; w < P3_WORDS.length; w++) {
+                        var ch = P3_WORDS[w][pos];
+                        if (ch !== correct && otherLetters.indexOf(ch) === -1) {
+                            otherLetters.push(ch);
+                        }
+                    }
+                    // Shuffle other letters
+                    otherLetters.sort(function () { return Math.random() - 0.5; });
+
+                    // Add 3-4 from other words at this position
+                    var fromWords = Math.min(otherLetters.length, 3 + Math.floor(Math.random() * 2));
+                    for (var j = 0; j < fromWords; j++) pool.push(otherLetters[j]);
+
+                    // Fill remaining with random noise letters
+                    var alphabet = 'abcdefghijklmnopqrstuvwxyz';
+                    while (pool.length < 6) {
+                        var ch = alphabet[Math.floor(Math.random() * 26)];
+                        if (pool.indexOf(ch) === -1) pool.push(ch);
+                    }
+
+                    // Shuffle the 6 letters
+                    pool.sort(function () { return Math.random() - 0.5; });
+                    p3.slots.push(pool);
+                }
+
+                // Verify uniqueness: only target should be compatible
+                var compatible = findCompatibleWords();
+                if (compatible.length !== 1) {
+                    // Retry — rare but possible
+                    return generateP3();
+                }
+
+                renderP3();
+            }
+
+            function findCompatibleWords() {
+                var result = [];
+                for (var w = 0; w < P3_WORDS.length; w++) {
+                    var word = P3_WORDS[w];
+                    var fits = true;
+                    for (var pos = 0; pos < 5; pos++) {
+                        if (p3.slots[pos].indexOf(word[pos]) === -1) { fits = false; break; }
+                    }
+                    if (fits) result.push(word);
+                }
+                return result;
+            }
+
+            function renderP3() {
+                var container = document.getElementById('p3Slots');
+                container.innerHTML = '';
+
+                for (var i = 0; i < 5; i++) {
+                    var slot = document.createElement('div');
+                    slot.className = 'p3-slot';
+                    slot.dataset.pos = i;
+
+                    slot.innerHTML =
+                        '<div class="p3-arrow p3-arrow-up" data-pos="' + i + '">▲</div>' +
+                        '<div class="p3-letter-display" data-pos="' + i + '">' + p3.slots[i][0] + '</div>' +
+                        '<div class="p3-arrow p3-arrow-down" data-pos="' + i + '">▼</div>';
+
+                    container.appendChild(slot);
+                }
+
+                // Arrow handlers
+                container.querySelectorAll('.p3-arrow-up').forEach(function (btn) {
+                    btn.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        if (state.currentPuzzle !== 3 || state.completed[2]) return;
+                        var pos = parseInt(this.dataset.pos);
+                        p3.currentIndex[pos] = (p3.currentIndex[pos] - 1 + 6) % 6;
+                        updateP3Display(pos);
+                    });
+                });
+
+                container.querySelectorAll('.p3-arrow-down').forEach(function (btn) {
+                    btn.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        if (state.currentPuzzle !== 3 || state.completed[2]) return;
+                        var pos = parseInt(this.dataset.pos);
+                        p3.currentIndex[pos] = (p3.currentIndex[pos] + 1) % 6;
+                        updateP3Display(pos);
+                    });
+                });
+            }
+
+            function updateP3Display(pos) {
+                var display = document.querySelector('.p3-letter-display[data-pos="' + pos + '"]');
+                display.textContent = p3.slots[pos][p3.currentIndex[pos]];
+            }
+
+            function getCurrentP3Word() {
+                var word = '';
+                for (var i = 0; i < 5; i++) {
+                    word += p3.slots[i][p3.currentIndex[i]];
+                }
+                return word;
+            }
+
+            function setupP3Interaction() {
+                document.getElementById('p3Submit').addEventListener('click', function (e) {
+                    e.preventDefault();
+                    if (state.currentPuzzle !== 3 || state.completed[2]) return;
+                    var entered = getCurrentP3Word();
+                    if (entered === p3.target) {
+                        onP3Success();
+                    } else {
+                        onP3Fail();
+                    }
+                });
+            }
+
+            function onP3Success() {
+                state.completed[2] = true;
+                state.tokens[2] = (state.tokens[1] || 0) ^ 0x50335A5A;
+                showFeedback('success', 'DISARMED');
+                document.getElementById('led3').className = 'led completed';
+                document.getElementById('ledLabel3').className = 'led-label completed';
+                setTimeout(function () { transitionToPuzzle(4); }, 1200);
+            }
+
+            function onP3Fail() {
+                showFeedback('error', 'ERROR');
+                setTimeout(function () { fullReset(); }, 600);
+            }
+
+            // ── FULL RESET ──
+            function fullReset() {
+                state.currentPuzzle = 1;
+                state.tokens = [null, null, null];
+                state.completed = [false, false, false];
+
+                for (var i = 1; i <= 3; i++) {
+                    document.getElementById('led' + i).className = 'led' + (i === 1 ? ' active' : '');
+                    document.getElementById('ledLabel' + i).className = 'led-label' + (i === 1 ? ' active' : '');
+                }
+
+                document.querySelectorAll('.puzzle-screen').forEach(function (el) { el.classList.remove('active'); });
+                document.getElementById('revealScreen').classList.remove('active');
+                document.getElementById('puzzle1').classList.add('active');
+
+                // Restore timer
+                var timerEl = document.getElementById('globalTimer');
+                timerEl.style.display = '';
+                timerEl.classList.remove('urgent');
+
+                startTimer();
+                generateP1();
+                document.getElementById('statusText').textContent = 'FULL RESET — MODULE α ACTIVE';
+            }
+
+            // ── TRANSITIONS ──
+            function transitionToPuzzle(num) {
+                document.querySelectorAll('.puzzle-screen').forEach(function (el) { el.classList.remove('active'); });
+                if (num > 3) { showReveal(); return; }
+                state.currentPuzzle = num;
+                document.getElementById('led' + num).className = 'led active';
+                document.getElementById('ledLabel' + num).className = 'led-label active';
+                document.getElementById('puzzle' + num).classList.add('active');
+                var names = ['', 'α', 'β', 'γ'];
+                document.getElementById('statusText').textContent = 'MODULE ' + names[num] + ' ACTIVE — AWAITING INPUT';
+                if (num === 2) generateP2();
+                if (num === 3) generateP3();
+            }
+
+            function showReveal() {
+                document.querySelectorAll('.puzzle-screen').forEach(function (el) { el.classList.remove('active'); });
+                if (timerInterval) clearInterval(timerInterval);
+                document.getElementById('globalTimer').style.display = 'none';
+                document.getElementById('revealScreen').classList.add('active');
+                document.getElementById('revealWord').textContent = FINAL_WORD;
+                document.getElementById('revealNumber').textContent = FINAL_INDEX;
+                document.getElementById('statusText').textContent = 'ALL MODULES DISARMED — SEED RECOVERED';
+            }
+
+            function showFeedback(type, text) {
+                var el = document.getElementById('feedback');
+                var txt = document.getElementById('feedbackText');
+                el.className = 'feedback-overlay ' + type + ' show';
+                txt.textContent = text;
+                setTimeout(function () { el.className = 'feedback-overlay'; }, 800);
+            }
+
+            // ── INIT ──
+            function init() { renderGlobals(); startTimer(); generateP1(); setupP1Interaction(); setupP3Interaction(); }
+            document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', init) : init();
+        })();
+    </script>
+</body>
+
+</html>

@@ -106,3 +106,167 @@ Non cercarmi.
 
 File allegati
 —-
+seed 6
+
+# HASH-MINE — Manuale operativo
+
+`// archivio 0xC1PH3R — frammenti decriptati — integrità parziale //`
+
+---
+
+## PROTOCOLLO DI DISINNESCO — MODULO ALPHA
+
+`// frammento decriptato — archivio 0xC1PH3R — integrità: 55% //`
+
+Non fidarti del pulsante. Un pulsante che ti dice di premerlo è esattamente il tipo di trappola che piazzerei io. Segui il protocollo o perdi tutto.
+
+Prima di toccare qualsiasi cosa, identifica i componenti del pannello:
+
+- **Power cells:** le celle di alimentazione sono nella parte alta dello schermo. Contale.
+- **Network nodes:** i nodi di rete hanno un'etichetta di tre lettere e un LED che può essere acceso o spento. Controlla quali etichette sono presenti e quali LED sono attivi.
+- **Il pulsante:** ha un colore e una scritta. Leggili entrambi prima di agire.
+
+---
+
+### Procedura di attivazione
+
+Segui queste regole **nell'ordine in cui sono scritte**. Esegui **la prima che si applica** e ignora tutte le successive.
+
+1. Se il pulsante è **blu** e la scritta è **ABORT** → tieni premuto il pulsante e vai a «Rilascio controllato».
+
+2. Se ci sono **più di una power cell** e la scritta è **DETONATE** → premi e rilascia immediatamente.
+
+3. Se il pulsante è **bianco** e il nodo **CAR** ha il LED acceso → tieni premuto il pulsante e vai a «Rilascio controllato».
+
+4. Se ci sono **più di due power cell** e il nodo **FRK** ha il LED acceso → premi e rilascia immediatamente.
+
+5. Se il pulsante è **giallo** → tieni premuto il pulsante e vai a «Rilascio controllato».
+
+6. Se il pulsante è **rosso** e la scritta è **HOLD** → premi e rilascia immediatamente.
+
+7. Se nessuna delle regole precedenti si applica → tieni premuto il pulsante e vai a «Rilascio controllato».
+
+---
+
+### Rilascio controllato
+
+Quando tieni premuto il pulsante, una striscia colorata si illumina sul lato destro del modulo. Non rilasciare subito — osserva il colore della striscia e aspetta il momento giusto.
+
+Guarda il timer sullo schermo e rilascia il pulsante quando **una qualsiasi cifra** del timer corrisponde alla regola:
+
+| Colore della striscia | Rilascia quando il timer mostra… |
+|---|---|
+| Blu | un **4** in qualsiasi posizione |
+| Bianca | un **1** in qualsiasi posizione |
+| Gialla | un **5** in qualsiasi posizione |
+| Qualsiasi altro colore | un **1** in qualsiasi posizione |
+
+`// fine frammento — se sbagli, il sistema si resetta. Non avrai gli stessi parametri due volte. //`
+
+---
+
+## PROTOCOLLO DI DISINNESCO — MODULO BETA
+
+`// frammento decriptato — archivio 0xC1PH3R — integrità: 63% //`
+
+I cavi non sono semplici. Alcuni hanno strisce colorate, altri sono collegati a nodi attivi. Non fidarti delle apparenze — un cavo bianco può essere più pericoloso di uno rosso.
+
+Ho lasciato uno schema. Se lo sai leggere, ti dice esattamente quali cavi tagliare. Sbaglia un taglio e il sistema riconfigura tutto.
+
+---
+
+### Anatomia di un cavo
+
+Ogni cavo nel pannello ha quattro attributi visivi. Osservali tutti prima di consultare il diagramma:
+
+- **Colore del cavo:** può essere rosso, blu, rosso e blu (a strisce), oppure neutro (grigio, nessun colore).
+- **Nodo superiore:** sopra ogni cavo c'è un LED. Può essere acceso (verde) o spento.
+- **Marker ★:** sotto ogni cavo c'è uno spazio per il simbolo ★. Può essere presente (★ ambra) o assente (☆ grigio).
+
+Un cavo rosso e blu è un cavo a strisce — entrambi i colori sono presenti.
+
+---
+
+### Come usare il diagramma
+
+Il diagramma di Venn allegato ha quattro insiemi, uno per ogni attributo:
+
+- **Tratteggio punto** = il cavo è rosso
+- **Linea continua** = il cavo è blu
+- **Puntinato** = il cavo ha il marker ★
+- **Tratteggio grosso** = il nodo superiore è attivo
+
+Per ogni cavo, identifica quali attributi possiede. Trova la regione del diagramma che corrisponde esattamente a quella combinazione di attributi. La lettera nella regione ti dice cosa fare.
+
+---
+
+### Proprietà aggiuntive del dispositivo
+
+Alcune lettere nel diagramma richiedono informazioni aggiuntive dal pannello, visibili nella parte alta dello schermo:
+
+- **Device serial:** una stringa alfanumerica. L'ultimo carattere è sempre una cifra.
+- **Data ports:** le interfacce fisiche del dispositivo. Ogni porta è indicata con un nome; quelle presenti sono evidenziate, le assenti sono grigie.
+
+---
+
+### Legenda delle istruzioni
+
+| Lettera | Istruzione |
+|---|---|
+| **T** | Taglia il cavo |
+| **N** | Non tagliare il cavo |
+| **S** | Taglia il cavo se l'ultima cifra del device serial è **pari** |
+| **P** | Taglia il cavo se il dispositivo ha una porta **PARALLEL** |
+| **B** | Taglia il cavo se ci sono **2 o più** power cells |
+
+---
+
+### Procedura
+
+Analizza ogni cavo da sinistra a destra. Per ogni cavo decidi: tagliare o non tagliare. Taglia solo i cavi che il diagramma indica di tagliare. Quando tutti i cavi corretti sono stati tagliati, il modulo si disarma.
+
+Se tagli un cavo che non andava tagliato, il sistema si resetta con una nuova configurazione. Le proprietà globali del dispositivo restano invariate.
+
+`// fine frammento — il diagramma è nell'allegato stampato. Se lo hai perso, sei nei guai. //`
+
+---
+
+## PROTOCOLLO DI DISINNESCO — MODULO GAMMA
+
+`// frammento decriptato — archivio 0xC1PH3R — integrità: 91% //`
+
+L'ultimo modulo è una serratura a combinazione. Cinque slot, una sola parola corretta. Non tirare a indovinare — se sbagli, il sistema resetta tutto dall'inizio.
+
+---
+
+### Come funziona
+
+Il pannello mostra cinque slot, ciascuno con una lettera visibile. Le frecce sopra e sotto ogni slot scorrono tra sei lettere possibili per quella posizione.
+
+La parola corretta è **l'unica** che si può comporre usando le lettere disponibili in tutti e cinque gli slot **e** che compare nella lista qui sotto. Nessun'altra parola della lista è compatibile con le lettere mostrate.
+
+Quando pensi di aver trovato la parola corretta, impostala negli slot e premi **SUBMIT**.
+
+---
+
+### Procedura consigliata
+
+1. Chi ha il telefono legge ad alta voce le sei lettere disponibili in ogni slot, da sinistra a destra.
+2. Chi ha il manuale confronta le lettere con la lista di parole e cerca l'unica compatibile.
+3. Chi ha il telefono imposta la parola trovata e conferma.
+
+---
+
+### Lista password
+
+```
+about   above   again   alpha   arena
+birth   black   brain   catch   chalk
+clean   crane   dance   equal   fault
+floor   grace   guard   ivory   knife
+large   magic   metal   nurse   other
+peace   place   power   right   scale
+skull   space   stone   thing   world
+```
+
+`// fine frammento — una sola parola, nessun margine d'errore. //`
