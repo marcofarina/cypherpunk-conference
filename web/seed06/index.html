@@ -780,6 +780,46 @@
             }
         }
 
+        /* ── Lockout overlay ── */
+        .lockout-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            background: rgba(0, 0, 0, 0.92);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .lockout-overlay.hidden {
+            display: none;
+        }
+
+        .lockout-title {
+            font-family: var(--font-display);
+            font-size: 32px;
+            color: var(--red);
+            letter-spacing: 3px;
+            text-shadow: 0 0 20px rgba(255, 34, 68, 0.6);
+        }
+
+        .lockout-countdown {
+            font-family: var(--font-display);
+            font-size: 64px;
+            color: var(--red);
+            letter-spacing: 4px;
+            text-shadow: 0 0 30px rgba(255, 34, 68, 0.5);
+        }
+
+        .lockout-sub {
+            font-size: 10px;
+            color: #555;
+            letter-spacing: 2px;
+            margin-top: 8px;
+        }
+
         /* ── Status ── */
         .status-bar {
             text-align: center;
@@ -877,6 +917,11 @@
         <div class="feedback-overlay" id="feedback">
             <div class="feedback-text" id="feedbackText"></div>
         </div>
+        <div class="lockout-overlay hidden" id="lockout">
+            <div class="lockout-title">SYSTEM LOCKED</div>
+            <div class="lockout-countdown" id="lockoutCountdown">00</div>
+            <div class="lockout-sub">// security cooldown — please wait //</div>
+        </div>
     </div>
 
     <script>
@@ -908,31 +953,45 @@
             var PORT_POOL = ['PARALLEL', 'SERIAL', 'RJ-45', 'DVI', 'PS/2', 'STEREO'];
             var ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
 
-            var globals = { powerCellCount: randInt(0, 4), nodes: [], serial: '', serialLastDigit: 0, ports: [], hasParallel: false };
+            var globals = { powerCellCount: 0, nodes: [], serial: '', serialLastDigit: 0, ports: [], hasParallel: false };
 
-            // Nodes
-            var nc = randInt(2, 4);
-            var sn = NODE_POOL.slice().sort(function () { return rng() - 0.5; });
-            for (var i = 0; i < nc; i++) globals.nodes.push({ label: sn[i], active: rng() > 0.5 });
-            if (!globals.nodes.some(function (n) { return n.label === 'CAR'; })) globals.nodes[0].label = 'CAR';
-            if (!globals.nodes.some(function (n) { return n.label === 'FRK'; }) && globals.nodes.length > 1) globals.nodes[globals.nodes.length - 1].label = 'FRK';
+            function generateGlobals() {
+                globals.powerCellCount = Math.floor(Math.random() * 5); // 0–4
+                globals.nodes = [];
+                globals.serial = '';
+                globals.serialLastDigit = 0;
+                globals.ports = [];
+                globals.hasParallel = false;
 
-            // Serial
-            globals.serialLastDigit = Math.floor(rng() * 10);
-            globals.serial = ALPHA[Math.floor(rng() * ALPHA.length)] + Math.floor(rng() * 10) + ALPHA[Math.floor(rng() * ALPHA.length)] + Math.floor(rng() * 10) + globals.serialLastDigit;
+                // Nodes: 2–4
+                var nc = 2 + Math.floor(Math.random() * 3);
+                var sn = NODE_POOL.slice().sort(function () { return Math.random() - 0.5; });
+                for (var i = 0; i < nc; i++) globals.nodes.push({ label: sn[i], active: Math.random() > 0.5 });
+                if (!globals.nodes.some(function (n) { return n.label === 'CAR'; })) globals.nodes[0].label = 'CAR';
+                if (!globals.nodes.some(function (n) { return n.label === 'FRK'; }) && globals.nodes.length > 1) globals.nodes[globals.nodes.length - 1].label = 'FRK';
 
-            // Ports
-            var pc = randInt(2, 4);
-            var sp = PORT_POOL.slice().sort(function () { return rng() - 0.5; });
-            for (var i = 0; i < pc; i++) {
-                var pr = rng() > 0.4;
-                globals.ports.push({ label: sp[i], present: pr });
-                if (sp[i] === 'PARALLEL' && pr) globals.hasParallel = true;
-            }
-            if (!globals.ports.some(function (p) { return p.label === 'PARALLEL'; })) {
-                var pr = rng() > 0.5;
-                globals.ports[0] = { label: 'PARALLEL', present: pr };
-                if (pr) globals.hasParallel = true;
+                // Serial — last digit 1–9, never 0
+                globals.serialLastDigit = 1 + Math.floor(Math.random() * 9);
+                globals.serial =
+                    ALPHA[Math.floor(Math.random() * ALPHA.length)] +
+                    Math.floor(Math.random() * 10) +
+                    ALPHA[Math.floor(Math.random() * ALPHA.length)] +
+                    Math.floor(Math.random() * 10) +
+                    globals.serialLastDigit;
+
+                // Ports: 2–4
+                var pc = 2 + Math.floor(Math.random() * 3);
+                var sp = PORT_POOL.slice().sort(function () { return Math.random() - 0.5; });
+                for (var i = 0; i < pc; i++) {
+                    var pr = Math.random() > 0.4;
+                    globals.ports.push({ label: sp[i], present: pr });
+                    if (sp[i] === 'PARALLEL' && pr) globals.hasParallel = true;
+                }
+                if (!globals.ports.some(function (p) { return p.label === 'PARALLEL'; })) {
+                    var pr = Math.random() > 0.5;
+                    globals.ports[0] = { label: 'PARALLEL', present: pr };
+                    if (pr) globals.hasParallel = true;
+                }
             }
 
             function renderGlobals() {
@@ -1119,7 +1178,7 @@
             var p2 = { wires: [], cutCount: 0, shouldCutCount: 0 };
 
             function generateP2() {
-                var count = 4 + Math.floor(Math.random() * 3);
+                var count = 6;
                 p2.wires = []; p2.cutCount = 0; p2.shouldCutCount = 0;
                 for (var i = 0; i < count; i++) {
                     var red = Math.random() > 0.5, blue = Math.random() > 0.5;
@@ -1130,7 +1189,8 @@
                     p2.wires.push({ red: red, blue: blue, star: star, led: led, shouldCut: shouldCut, isCut: false });
                     if (shouldCut) p2.shouldCutCount++;
                 }
-                if (p2.shouldCutCount === 0) return generateP2();
+                // Retry until 2–4 wires must be cut (roughly 50%)
+                if (p2.shouldCutCount < 2 || p2.shouldCutCount > 4) return generateP2();
                 renderP2();
             }
 
@@ -1201,10 +1261,10 @@
 
             // ── PUZZLE 3: PASSWORD ──
             var P3_WORDS = [
-                'about', 'above', 'again', 'alpha', 'arena', 'birth', 'black', 'brain', 'catch', 'chalk',
-                'clean', 'crane', 'dance', 'equal', 'fault', 'floor', 'grace', 'guard', 'ivory', 'knife',
-                'large', 'magic', 'metal', 'nurse', 'other', 'peace', 'place', 'power', 'right', 'scale',
-                'skull', 'space', 'stone', 'thing', 'world'
+                'about', 'after', 'again', 'below', 'could', 'every', 'first', 'found', 'great', 'house',
+                'large', 'learn', 'never', 'other', 'place', 'plant', 'point', 'right', 'small', 'sound',
+                'spell', 'still', 'study', 'their', 'there', 'these', 'thing', 'think', 'three', 'water',
+                'where', 'which', 'world', 'would', 'write'
             ];
 
             var p3 = { target: '', slots: [], currentIndex: [] };
@@ -1364,14 +1424,18 @@
                 document.getElementById('revealScreen').classList.remove('active');
                 document.getElementById('puzzle1').classList.add('active');
 
-                // Restore timer
                 var timerEl = document.getElementById('globalTimer');
                 timerEl.style.display = '';
                 timerEl.classList.remove('urgent');
 
+                // Regenerate everything
+                generateGlobals();
+                renderGlobals();
                 startTimer();
                 generateP1();
-                document.getElementById('statusText').textContent = 'FULL RESET — MODULE α ACTIVE';
+
+                // Anti-brute-force: escalating cooldown
+                applyLockout();
             }
 
             // ── TRANSITIONS ──
@@ -1391,6 +1455,7 @@
             function showReveal() {
                 document.querySelectorAll('.puzzle-screen').forEach(function (el) { el.classList.remove('active'); });
                 if (timerInterval) clearInterval(timerInterval);
+                clearLockoutOnSuccess();
                 document.getElementById('globalTimer').style.display = 'none';
                 document.getElementById('revealScreen').classList.add('active');
                 document.getElementById('revealWord').textContent = FINAL_WORD;
@@ -1406,8 +1471,83 @@
                 setTimeout(function () { el.className = 'feedback-overlay'; }, 800);
             }
 
+            // ── ANTI-BRUTE-FORCE LOCKOUT ──
+            var LOCKOUT_KEY = 'hm6_lockout';
+            var LOCKOUT_BASE = 5;  // secondi base
+            var LOCKOUT_MAX = 30;  // secondi massimo
+            var lockoutInterval = null;
+
+            function getLockoutData() {
+                try {
+                    var d = JSON.parse(localStorage.getItem(LOCKOUT_KEY));
+                    return d || { fails: 0, unlockAt: 0 };
+                } catch (e) { return { fails: 0, unlockAt: 0 }; }
+            }
+
+            function setLockoutData(d) {
+                try { localStorage.setItem(LOCKOUT_KEY, JSON.stringify(d)); } catch (e) { }
+            }
+
+            function applyLockout() {
+                var d = getLockoutData();
+                d.fails++;
+                var wait = Math.min(d.fails * LOCKOUT_BASE, LOCKOUT_MAX);
+                d.unlockAt = Date.now() + wait * 1000;
+                setLockoutData(d);
+                showLockoutOverlay(d.unlockAt);
+            }
+
+            function checkLockoutOnLoad() {
+                var d = getLockoutData();
+                var remaining = d.unlockAt - Date.now();
+                if (remaining > 0) {
+                    showLockoutOverlay(d.unlockAt);
+                    return true;
+                }
+                return false;
+            }
+
+            function showLockoutOverlay(unlockAt) {
+                var overlay = document.getElementById('lockout');
+                var countdown = document.getElementById('lockoutCountdown');
+                overlay.classList.remove('hidden');
+
+                // Pause the game timer
+                if (timerInterval) clearInterval(timerInterval);
+
+                if (lockoutInterval) clearInterval(lockoutInterval);
+                lockoutInterval = setInterval(function () {
+                    var remaining = Math.ceil((unlockAt - Date.now()) / 1000);
+                    if (remaining <= 0) {
+                        clearInterval(lockoutInterval);
+                        overlay.classList.add('hidden');
+                        document.getElementById('statusText').textContent = 'MODULE α ACTIVE — AWAITING INPUT';
+                        startTimer();
+                        return;
+                    }
+                    countdown.textContent = String(remaining);
+                }, 200);
+            }
+
+            function clearLockoutOnSuccess() {
+                try { localStorage.removeItem(LOCKOUT_KEY); } catch (e) { }
+            }
+
             // ── INIT ──
-            function init() { renderGlobals(); startTimer(); generateP1(); setupP1Interaction(); setupP3Interaction(); }
+            function init() {
+                generateGlobals();
+                renderGlobals();
+                generateP1();
+                setupP1Interaction();
+                setupP3Interaction();
+
+                if (checkLockoutOnLoad()) {
+                    // Locked — timer will start when lockout ends
+                    document.getElementById('statusText').textContent = 'SYSTEM LOCKED — COOLDOWN ACTIVE';
+                } else {
+                    startTimer();
+                }
+            }
             document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', init) : init();
         })();
     </script>
