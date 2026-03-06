@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>0xC1PH3R — VAULT</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Share+Tech+Mono&display=swap"
+        rel="stylesheet">
+    <style>
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #0a0a0a;
+            --green: #00ff41;
+            --green-dim: #00cc33;
+            --green-dark: #003300;
+            --amber: #ffb000;
+            --amber-dim: #cc8d00;
+            --red: #ff2020;
+            --red-dim: #cc1a1a;
+            --grey: #1a1a1a;
+            --grey-light: #2a2a2a;
+            --text-dim: #555;
+        }
+
+        html,
+        body {
+            height: 100%;
+            background: var(--bg);
+            color: var(--green);
+            font-family: 'JetBrains Mono', 'Share Tech Mono', monospace;
+            overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: repeating-linear-gradient(0deg,
+                    rgba(0, 0, 0, 0) 0px,
+                    rgba(0, 0, 0, 0) 2px,
+                    rgba(0, 0, 0, 0.15) 2px,
+                    rgba(0, 0, 0, 0.15) 4px);
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            min-height: 100dvh;
+            padding: 20px;
+            position: relative;
+        }
+
+        /* ── SHAKE ── */
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            10%,
+            50%,
+            90% {
+                transform: translateX(-6px);
+            }
+
+            30%,
+            70% {
+                transform: translateX(6px);
+            }
+
+            20%,
+            60% {
+                transform: translateX(-3px);
+            }
+
+            40%,
+            80% {
+                transform: translateX(3px);
+            }
+        }
+
+        .shake {
+            animation: shake 0.5s cubic-bezier(.36, .07, .19, .97) both;
+        }
+
+        /* ── HEADER ── */
+        .vault-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .vault-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 16px;
+            position: relative;
+        }
+
+        .vault-icon svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .vault-title {
+            font-size: 13px;
+            letter-spacing: 4px;
+            color: var(--amber);
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .vault-subtitle {
+            font-size: 11px;
+            color: var(--text-dim);
+            letter-spacing: 1px;
+        }
+
+        /* ── LOGIN FORM ── */
+        .login-panel {
+            width: 100%;
+            max-width: 340px;
+            border: 1px solid var(--green-dark);
+            background: rgba(0, 255, 65, 0.02);
+            padding: 24px 20px;
+            position: relative;
+        }
+
+        .login-panel::before {
+            content: 'AUTHENTICATION REQUIRED';
+            position: absolute;
+            top: -9px;
+            left: 12px;
+            background: var(--bg);
+            padding: 0 8px;
+            font-size: 9px;
+            letter-spacing: 2px;
+            color: var(--green-dim);
+        }
+
+        .field {
+            margin-bottom: 18px;
+        }
+
+        .field-label {
+            display: block;
+            font-size: 9px;
+            letter-spacing: 2px;
+            color: var(--amber-dim);
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .field-input {
+            width: 100%;
+            background: var(--grey);
+            border: 1px solid var(--grey-light);
+            color: var(--green);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            padding: 10px 12px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .field-input:focus {
+            border-color: var(--green-dark);
+        }
+
+        .field-input[readonly] {
+            color: var(--text-dim);
+            cursor: not-allowed;
+        }
+
+        .field-input::placeholder {
+            color: #333;
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 12px;
+            background: transparent;
+            border: 1px solid var(--green-dim);
+            color: var(--green);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-login:active {
+            background: rgba(0, 255, 65, 0.1);
+        }
+
+        .btn-login:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        /* ── STATUS ── */
+        .status-line {
+            margin-top: 14px;
+            font-size: 10px;
+            text-align: center;
+            min-height: 16px;
+            transition: color 0.3s;
+        }
+
+        .status-line.error {
+            color: var(--red);
+        }
+
+        .status-line.neutral {
+            color: var(--text-dim);
+        }
+
+        /* ── ATTEMPTS ── */
+        .attempts-bar {
+            margin-top: 10px;
+            display: flex;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .attempt-pip {
+            width: 6px;
+            height: 6px;
+            border: 1px solid var(--grey-light);
+            transition: all 0.3s;
+        }
+
+        .attempt-pip.used {
+            background: var(--red-dim);
+            border-color: var(--red-dim);
+        }
+
+        /* ── HINT ── */
+        .hint-box {
+            margin-top: 16px;
+            padding: 10px 12px;
+            border-left: 2px solid var(--amber-dim);
+            background: rgba(255, 176, 0, 0.03);
+            font-size: 10px;
+            color: var(--amber-dim);
+            line-height: 1.6;
+            opacity: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: opacity 0.5s, max-height 0.5s;
+        }
+
+        .hint-box.visible {
+            opacity: 1;
+            max-height: 200px;
+        }
+
+        .hint-label {
+            display: block;
+            font-size: 8px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+            color: var(--amber);
+        }
+
+        /* ── VAULT DOOR (success) ── */
+        .vault-overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.6s;
+        }
+
+        .vault-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .vault-door {
+            width: 220px;
+            height: 220px;
+            border: 3px solid var(--green-dim);
+            border-radius: 50%;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .vault-door::before {
+            content: '';
+            position: absolute;
+            inset: 6px;
+            border: 1px solid var(--green-dark);
+            border-radius: 50%;
+        }
+
+        .vault-handle {
+            width: 80px;
+            height: 8px;
+            background: var(--green-dim);
+            border-radius: 4px;
+            position: absolute;
+            transform-origin: center center;
+            transition: transform 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 0 12px rgba(0, 255, 65, 0.3);
+        }
+
+        .vault-handle.turned {
+            transform: rotate(720deg);
+        }
+
+        .vault-bolts {
+            position: absolute;
+            inset: 0;
+        }
+
+        .bolt {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: var(--green-dark);
+            border: 1px solid var(--green-dim);
+            border-radius: 50%;
+            transition: all 0.6s;
+        }
+
+        .bolt:nth-child(1) {
+            top: 14px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .bolt:nth-child(2) {
+            bottom: 14px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .bolt:nth-child(3) {
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .bolt:nth-child(4) {
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .bolt.retracted:nth-child(1) {
+            top: 50%;
+            opacity: 0;
+        }
+
+        .bolt.retracted:nth-child(2) {
+            bottom: 50%;
+            opacity: 0;
+        }
+
+        .bolt.retracted:nth-child(3) {
+            left: 50%;
+            opacity: 0;
+        }
+
+        .bolt.retracted:nth-child(4) {
+            right: 50%;
+            opacity: 0;
+        }
+
+        /* vault opening — split */
+        .vault-door-half {
+            position: absolute;
+            width: 50%;
+            height: 100%;
+            background: var(--bg);
+            border: none;
+            transition: transform 0.8s cubic-bezier(0.45, 0, 0.55, 1);
+            overflow: hidden;
+            z-index: 2;
+        }
+
+        .vault-door-half.left {
+            left: 0;
+            border-right: 1px solid var(--green-dark);
+        }
+
+        .vault-door-half.right {
+            right: 0;
+            border-left: 1px solid var(--green-dark);
+        }
+
+        .vault-door-half.left.open {
+            transform: translateX(-110%);
+        }
+
+        .vault-door-half.right.open {
+            transform: translateX(110%);
+        }
+
+        /* revealed content */
+        .vault-content {
+            text-align: center;
+            z-index: 1;
+            opacity: 0;
+            transform: scale(0.8);
+            transition: all 0.6s 0.4s;
+        }
+
+        .vault-content.revealed {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .vault-number {
+            font-size: 48px;
+            font-weight: 700;
+            color: var(--green);
+            text-shadow: 0 0 20px rgba(0, 255, 65, 0.5), 0 0 40px rgba(0, 255, 65, 0.2);
+            line-height: 1;
+        }
+
+
+        .vault-label-top {
+            font-size: 9px;
+            letter-spacing: 3px;
+            color: var(--green-dim);
+            margin-bottom: 12px;
+        }
+
+        .vault-label-bottom {
+            font-size: 9px;
+            letter-spacing: 2px;
+            color: var(--text-dim);
+            margin-top: 16px;
+        }
+
+        /* full reveal after door opens */
+        .vault-result {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.8s;
+            transition-delay: 0.2s;
+        }
+
+        .vault-result.visible {
+            opacity: 1;
+        }
+
+        /* ── LOCKOUT ── */
+        .lockout-msg {
+            font-size: 10px;
+            color: var(--red-dim);
+            text-align: center;
+            margin-top: 12px;
+            display: none;
+        }
+
+        .lockout-msg.visible {
+            display: block;
+        }
+
+        /* ── ACCESS GRANTED FLASH ── */
+        @keyframes accessFlash {
+            0% {
+                opacity: 0;
+            }
+
+            20% {
+                opacity: 1;
+            }
+
+            80% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0;
+            }
+        }
+
+        .access-flash {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg);
+            z-index: 999;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .access-flash.active {
+            animation: accessFlash 1.8s ease forwards;
+            pointer-events: all;
+        }
+
+        .access-text {
+            font-size: 14px;
+            letter-spacing: 6px;
+            color: var(--green);
+            text-shadow: 0 0 20px rgba(0, 255, 65, 0.6);
+        }
+
+        /* ── LOADING DOTS ── */
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 0.2;
+            }
+
+            50% {
+                opacity: 1;
+            }
+        }
+
+        .loading-dots span {
+            animation: blink 1.2s infinite;
+        }
+
+        .loading-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .loading-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container" id="mainContainer">
+        <div class="vault-header">
+            <div class="vault-icon">
+                <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="8" y="16" width="64" height="52" rx="4" stroke="#00ff41" stroke-width="1.5" fill="none" />
+                    <rect x="14" y="22" width="52" height="40" rx="2" stroke="#003300" stroke-width="1" fill="none" />
+                    <circle cx="40" cy="42" r="12" stroke="#00ff41" stroke-width="1.5" fill="none" />
+                    <circle cx="40" cy="42" r="4" fill="#003300" stroke="#00ff41" stroke-width="1" />
+                    <line x1="40" y1="30" x2="40" y2="34" stroke="#00cc33" stroke-width="1.5" stroke-linecap="round" />
+                    <line x1="40" y1="50" x2="40" y2="54" stroke="#00cc33" stroke-width="1.5" stroke-linecap="round" />
+                    <line x1="28" y1="42" x2="32" y2="42" stroke="#00cc33" stroke-width="1.5" stroke-linecap="round" />
+                    <line x1="48" y1="42" x2="52" y2="42" stroke="#00cc33" stroke-width="1.5" stroke-linecap="round" />
+                    <rect x="28" y="10" width="24" height="6" rx="2" stroke="#003300" stroke-width="1" fill="none" />
+                </svg>
+            </div>
+            <div class="vault-title">0xC1PH3R vault</div>
+            <div class="vault-subtitle">encrypted storage // seed recovery</div>
+        </div>
+
+        <div class="login-panel" id="loginPanel">
+            <div class="field">
+                <label class="field-label">Identity</label>
+                <input class="field-input" type="text" value="0xC1PH3R" readonly>
+            </div>
+            <div class="field">
+                <label class="field-label">Passphrase</label>
+                <input class="field-input" type="password" id="passInput" placeholder="enter passphrase"
+                    autocomplete="off" autocapitalize="off" spellcheck="false">
+            </div>
+            <button class="btn-login" id="btnLogin" type="button">Decrypt vault</button>
+
+            <div class="status-line neutral" id="statusLine">&nbsp;</div>
+
+            <div class="attempts-bar" id="attemptsBar"></div>
+
+            <div class="hint-box" id="hintBox">
+                <span class="hint-label">Intercept</span>
+                <span id="hintText"></span>
+            </div>
+
+            <div class="lockout-msg" id="lockoutMsg">
+                Troppi tentativi. Vault temporaneamente bloccato<span
+                    class="loading-dots"><span>.</span><span>.</span><span>.</span></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ACCESS GRANTED flash -->
+    <div class="access-flash" id="accessFlash">
+        <div class="access-text">ACCESS GRANTED</div>
+    </div>
+
+    <!-- VAULT OPENING overlay -->
+    <div class="vault-overlay" id="vaultOverlay">
+        <div class="vault-door" id="vaultDoor">
+            <div class="vault-bolts" id="vaultBolts">
+                <div class="bolt"></div>
+                <div class="bolt"></div>
+                <div class="bolt"></div>
+                <div class="bolt"></div>
+            </div>
+            <div class="vault-handle" id="vaultHandle"></div>
+            <div class="vault-door-half left" id="doorLeft"></div>
+            <div class="vault-door-half right" id="doorRight"></div>
+            <div class="vault-content" id="vaultContent">
+                <div class="vault-label-top">BIP-39 INDEX</div>
+                <div class="vault-number" id="vaultNumber"></div>
+                <div class="vault-label-bottom">seed word #7 recovered</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            'use strict';
+
+            /* ── CONFIG ── */
+            const PASSPHRASE = atob('d3IxdDNjMGQz');
+            const SEED_INDEX = atob('NzI3');
+            const MAX_PIPS = 10;
+            const LOCKOUT_AT = 10;
+            const LOCKOUT_MS = 15000;
+            const HINTS = [
+                { at: 3, text: '«La mia identità non vive su nessun server — vive su un protocollo.»' },
+                { at: 5, text: 'I relay trasmettono note pubbliche. Il mio handle ti aiuterà a trovarmi.' },
+                { at: 8, text: 'Cerca 0xc1ph3r@iris.to su un client Nostr. La passphrase è nascosta tra le sue note — scritta come un cypherpunk scriverebbe.' },
+            ];
+
+            /* ── STATE ── */
+            let attempts = 0;
+            let lockedOut = false;
+            let solved = false;
+
+            /* ── DOM ── */
+            const passInput = document.getElementById('passInput');
+            const btnLogin = document.getElementById('btnLogin');
+            const statusLine = document.getElementById('statusLine');
+            const attemptsBar = document.getElementById('attemptsBar');
+            const hintBox = document.getElementById('hintBox');
+            const hintText = document.getElementById('hintText');
+            const loginPanel = document.getElementById('loginPanel');
+            const mainContainer = document.getElementById('mainContainer');
+            const lockoutMsg = document.getElementById('lockoutMsg');
+            const accessFlash = document.getElementById('accessFlash');
+            const vaultOverlay = document.getElementById('vaultOverlay');
+            const vaultHandle = document.getElementById('vaultHandle');
+            const vaultBolts = document.getElementById('vaultBolts');
+            const doorLeft = document.getElementById('doorLeft');
+            const doorRight = document.getElementById('doorRight');
+            const vaultContent = document.getElementById('vaultContent');
+
+            /* ── INIT PIPS ── */
+            for (let i = 0; i < MAX_PIPS; i++) {
+                const pip = document.createElement('div');
+                pip.className = 'attempt-pip';
+                attemptsBar.appendChild(pip);
+            }
+
+            /* ── VIBRATE ── */
+            function vibrateDevice() {
+                if (navigator.vibrate) {
+                    navigator.vibrate([50, 30, 80]);
+                }
+            }
+
+            /* ── SHAKE ── */
+            function shakePanel() {
+                loginPanel.classList.remove('shake');
+                void loginPanel.offsetWidth; // reflow
+                loginPanel.classList.add('shake');
+                vibrateDevice();
+            }
+
+            /* ── UPDATE HINTS ── */
+            function updateHint() {
+                let bestHint = null;
+                for (const h of HINTS) {
+                    if (attempts >= h.at) bestHint = h;
+                }
+                if (bestHint) {
+                    hintText.textContent = bestHint.text;
+                    hintBox.classList.add('visible');
+                }
+            }
+
+            /* ── LOCKOUT ── */
+            function startLockout() {
+                lockedOut = true;
+                btnLogin.disabled = true;
+                passInput.disabled = true;
+                lockoutMsg.classList.add('visible');
+
+                setTimeout(() => {
+                    lockedOut = false;
+                    btnLogin.disabled = false;
+                    passInput.disabled = false;
+                    lockoutMsg.classList.remove('visible');
+                    statusLine.textContent = 'Vault sbloccato. Riprova.';
+                    statusLine.className = 'status-line neutral';
+                    passInput.focus();
+                }, LOCKOUT_MS);
+            }
+
+            /* ── SUCCESS SEQUENCE ── */
+            function triggerSuccess() {
+                solved = true;
+                btnLogin.disabled = true;
+                passInput.disabled = true;
+
+                statusLine.textContent = 'Decrypting...';
+                statusLine.className = 'status-line neutral';
+                statusLine.style.color = 'var(--green)';
+
+                // Phase 1: "ACCESS GRANTED" flash
+                setTimeout(() => {
+                    accessFlash.classList.add('active');
+                }, 600);
+
+                // Phase 2: Show vault overlay
+                setTimeout(() => {
+                    vaultOverlay.classList.add('active');
+                }, 2400);
+
+                // Phase 3: Turn handle
+                setTimeout(() => {
+                    vaultHandle.classList.add('turned');
+                }, 3000);
+
+                // Phase 4: Retract bolts
+                setTimeout(() => {
+                    const bolts = vaultBolts.querySelectorAll('.bolt');
+                    bolts.forEach(b => b.classList.add('retracted'));
+                }, 4200);
+
+                // Phase 5: Open doors, hide handle and bolts
+                setTimeout(() => {
+                    doorLeft.classList.add('open');
+                    doorRight.classList.add('open');
+                    vaultHandle.style.opacity = '0';
+                    vaultHandle.style.transition = 'opacity 0.4s';
+                    vaultBolts.style.opacity = '0';
+                    vaultBolts.style.transition = 'opacity 0.4s';
+                }, 4800);
+
+                // Phase 6: Reveal content
+                setTimeout(() => {
+                    document.getElementById('vaultNumber').textContent = SEED_INDEX;
+                    vaultContent.classList.add('revealed');
+                }, 5600);
+            }
+
+            /* ── ATTEMPT ── */
+            function tryLogin() {
+                if (solved || lockedOut) return;
+
+                const input = passInput.value.trim();
+
+                if (!input) {
+                    statusLine.textContent = 'Inserisci la passphrase.';
+                    statusLine.className = 'status-line error';
+                    shakePanel();
+                    return;
+                }
+
+                attempts++;
+
+                // Update pips
+                const pips = attemptsBar.querySelectorAll('.attempt-pip');
+                if (attempts <= MAX_PIPS) {
+                    pips[attempts - 1].classList.add('used');
+                }
+
+                if (input === PASSPHRASE) {
+                    triggerSuccess();
+                    return;
+                }
+
+                // Failed
+                shakePanel();
+
+                const remaining = LOCKOUT_AT - attempts;
+                if (remaining > 0) {
+                    statusLine.textContent = `Passphrase errata. ${remaining} tentativi rimanenti.`;
+                    statusLine.className = 'status-line error';
+                }
+
+                passInput.value = '';
+                passInput.focus();
+
+                updateHint();
+
+                // Lockout check
+                if (attempts >= LOCKOUT_AT) {
+                    statusLine.textContent = 'Troppi tentativi.';
+                    statusLine.className = 'status-line error';
+                    startLockout();
+                    // Reset pip counter after lockout
+                    setTimeout(() => {
+                        attempts = Math.max(attempts, HINTS[HINTS.length - 1].at); // keep hints visible
+                        const allPips = attemptsBar.querySelectorAll('.attempt-pip');
+                        allPips.forEach(p => p.classList.remove('used'));
+                    }, LOCKOUT_MS);
+                }
+            }
+
+            /* ── EVENTS ── */
+            btnLogin.addEventListener('click', tryLogin);
+            passInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') tryLogin();
+            });
+
+            // Focus on load
+            setTimeout(() => passInput.focus(), 300);
+        })();
+    </script>
+    <div
+        style="position:fixed;bottom:12px;left:0;right:0;text-align:center;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;color:#333;">
+        0xc1ph3r@iris.to</div>
+</body>
+
+</html>
