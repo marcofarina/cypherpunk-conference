@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ONION-ROUTE — 0xC1PH3R Terminal</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Share+Tech+Mono&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        :root {
+            --bg: #0a0a0a;
+            --green: #00ff41;
+            --green-dim: #00cc33;
+            --green-dark: #003300;
+            --amber: #ffb000;
+            --red: #ff3333;
+            --gray: #555;
+            --gray-light: #888;
+            --font: 'JetBrains Mono', 'Share Tech Mono', monospace;
+        }
+
+        html,
+        body {
+            height: 100%;
+            background: var(--bg);
+            color: var(--green);
+            font-family: var(--font);
+            font-size: 13px;
+            line-height: 1.5;
+            overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* CRT scanlines */
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: repeating-linear-gradient(0deg,
+                    transparent,
+                    transparent 2px,
+                    rgba(0, 0, 0, 0.15) 2px,
+                    rgba(0, 0, 0, 0.15) 4px);
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        /* CRT vignette */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(ellipse at center, transparent 60%, rgba(0, 0, 0, 0.5) 100%);
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        #terminal {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #header {
+            flex-shrink: 0;
+            border-bottom: 1px solid var(--green-dark);
+            padding: 8px 12px;
+            background: rgba(0, 255, 65, 0.03);
+        }
+
+        #header .title {
+            color: var(--amber);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+
+        #header .subtitle {
+            color: var(--green-dark);
+            font-size: 10px;
+            margin-top: 2px;
+            letter-spacing: 1px;
+        }
+
+        #output-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 12px;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+            scrollbar-color: var(--green-dark) var(--bg);
+        }
+
+        #output-area::-webkit-scrollbar {
+            width: 4px
+        }
+
+        #output-area::-webkit-scrollbar-track {
+            background: var(--bg)
+        }
+
+        #output-area::-webkit-scrollbar-thumb {
+            background: var(--green-dark);
+            border-radius: 2px
+        }
+
+        .line {
+            white-space: pre-wrap;
+            word-break: break-all
+        }
+
+        .line.cmd {
+            color: var(--green)
+        }
+
+        .line.out {
+            color: var(--green-dim)
+        }
+
+        .line.err {
+            color: var(--red)
+        }
+
+        .line.info {
+            color: var(--amber)
+        }
+
+        .line.dim {
+            color: var(--gray)
+        }
+
+        .prompt-color {
+            color: var(--amber)
+        }
+
+        .path-color {
+            color: var(--green)
+        }
+
+        .cmd-color {
+            color: #fff
+        }
+
+        /* permission colors */
+        .perm-d {
+            color: var(--amber)
+        }
+
+        .perm-r {
+            color: var(--green)
+        }
+
+        .perm-w {
+            color: var(--red)
+        }
+
+        .perm-x {
+            color: var(--amber)
+        }
+
+        .perm-dash {
+            color: var(--gray)
+        }
+
+        .file-dir {
+            color: var(--amber);
+            font-weight: 700
+        }
+
+        .file-exec {
+            color: var(--green);
+            font-weight: 700
+        }
+
+        .file-link {
+            color: #66ccff
+        }
+
+        .file-hidden {
+            color: var(--gray-light)
+        }
+
+        .file-normal {
+            color: var(--green-dim)
+        }
+
+        .size-col {
+            color: var(--gray-light)
+        }
+
+        .date-col {
+            color: var(--gray)
+        }
+
+        .owner-col {
+            color: var(--green-dark)
+        }
+
+        #input-area {
+            flex-shrink: 0;
+            border-top: 1px solid var(--green-dark);
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 0;
+            background: rgba(0, 255, 65, 0.03);
+        }
+
+        #prompt-label {
+            color: var(--amber);
+            white-space: pre;
+            font-size: 13px;
+            flex-shrink: 0;
+        }
+
+        #cmd-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #fff;
+            font-family: var(--font);
+            font-size: 13px;
+            caret-color: var(--green);
+            padding: 0;
+            margin: 0;
+        }
+
+        #cmd-input::placeholder {
+            color: var(--gray);
+            font-style: italic;
+        }
+
+        /* Boot animation */
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: 0
+            }
+        }
+
+        .cursor-blink {
+            animation: blink 1s step-end infinite
+        }
+
+        /* Glow on focus */
+        #input-area:focus-within {
+            box-shadow: 0 0 8px rgba(0, 255, 65, 0.1);
+        }
+
+        /* Seed reveal effect */
+        @keyframes reveal-glow {
+            0% {
+                text-shadow: 0 0 4px var(--green);
+                opacity: 0
+            }
+
+            50% {
+                text-shadow: 0 0 20px var(--green), 0 0 40px var(--green);
+                opacity: 1
+            }
+
+            100% {
+                text-shadow: 0 0 8px var(--green);
+                opacity: 1
+            }
+        }
+
+        @keyframes reveal-num {
+            0% {
+                text-shadow: 0 0 4px var(--amber);
+                opacity: 0
+            }
+
+            50% {
+                text-shadow: 0 0 24px var(--amber), 0 0 48px rgba(255, 176, 0, 0.5);
+                opacity: 1
+            }
+
+            100% {
+                text-shadow: 0 0 10px var(--amber);
+                opacity: 1
+            }
+        }
+
+        .line.reveal {
+            color: var(--green);
+            font-weight: 700;
+            animation: reveal-glow 1.5s ease-out;
+            text-shadow: 0 0 8px var(--green);
+            padding: 2px 0;
+        }
+
+        .line.reveal-num {
+            color: var(--amber);
+            font-weight: 700;
+            animation: reveal-num 2s ease-out 0.3s both;
+            text-shadow: 0 0 10px var(--amber), 0 0 20px rgba(255, 176, 0, 0.3);
+            padding: 2px 0;
+        }
+
+        .line.reveal-border {
+            color: var(--green-dark);
+            animation: reveal-glow 1s ease-out;
+            padding: 0;
+        }
+
+        /* Mobile adjustments */
+        @media(max-width:480px) {
+
+            html,
+            body {
+                font-size: 12px
+            }
+
+            #header {
+                padding: 6px 8px
+            }
+
+            #output-area {
+                padding: 6px 8px
+            }
+
+            #input-area {
+                padding: 6px 8px
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="terminal">
+        <div id="header">
+            <div class="title">ONION-ROUTE // 0xC1PH3R NODE</div>
+            <div class="subtitle">SESSION RESTORED — LAST LOGIN: 2026-02-14 03:41 UTC</div>
+        </div>
+        <div id="output-area" tabindex="-1"></div>
+        <div id="input-area">
+            <span id="prompt-label"></span>
+            <input id="cmd-input" type="text" autocomplete="off" autocorrect="off" autocapitalize="off"
+                spellcheck="false" placeholder="digita un comando...">
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            "use strict";
+
+            // ── Virtual Filesystem ──────────────────────────────────────────────
+            // Permissions: rwxrwxrwx (owner/group/other), stored as octal string
+            // Types: 'dir', 'file', 'link'
+            // Hidden files: name starts with '.'
+
+            const FS = {
+                '/': {
+                    type: 'dir', perm: '755', owner: 'root', group: 'root', size: 4096,
+                    modified: '2026-02-14 03:41',
+                    children: {
+                        'home': {
+                            type: 'dir', perm: '755', owner: 'root', group: 'root', size: 4096,
+                            modified: '2026-01-20 11:00',
+                            children: {
+                                'c1ph3r': {
+                                    type: 'dir', perm: '750', owner: 'c1ph3r', group: 'c1ph3r', size: 4096,
+                                    modified: '2026-02-14 03:38',
+                                    children: {
+                                        'README.txt': {
+                                            type: 'file', perm: '644', owner: 'c1ph3r', group: 'c1ph3r', size: 237,
+                                            modified: '2025-11-03 22:14',
+                                            content: 'Se sei arrivato fin qui, sai già cosa cercare.\nNon tutto è dove sembra. Alcuni file non vogliono essere trovati.\nAltri non vogliono essere letti.\n\n— 0xC1PH3R'
+                                        },
+                                        'notes': {
+                                            type: 'dir', perm: '755', owner: 'c1ph3r', group: 'c1ph3r', size: 4096,
+                                            modified: '2026-01-15 09:22',
+                                            children: {
+                                                'todo.txt': {
+                                                    type: 'file', perm: '644', owner: 'c1ph3r', group: 'c1ph3r', size: 184,
+                                                    modified: '2026-01-15 09:22',
+                                                    content: '[ ] spostare i fondi sul cold wallet\n[ ] cancellare i log del nodo\n[x] dividere la seed phrase\n[x] distruggere le copie fisiche\n[ ] sparire'
+                                                },
+                                                'contatti.txt': {
+                                                    type: 'file', perm: '644', owner: 'c1ph3r', group: 'c1ph3r', size: 93,
+                                                    modified: '2025-12-01 17:44',
+                                                    content: 'Non fidarti di nessuno che non sa spiegarti\ncome funziona una firma digitale.\n\n— 0xC1PH3R'
+                                                },
+                                                'dead-drop.txt': {
+                                                    type: 'file', perm: '644', owner: 'c1ph3r', group: 'c1ph3r', size: 156,
+                                                    modified: '2026-02-10 01:33',
+                                                    content: 'Punto di scambio compromesso.\nCoordinate eliminate.\nSe stai leggendo questo file è già troppo tardi per il drop.\nPassate al piano B.'
+                                                }
+                                            }
+                                        },
+                                        'scripts': {
+                                            type: 'dir', perm: '755', owner: 'c1ph3r', group: 'c1ph3r', size: 4096,
+                                            modified: '2026-02-13 19:05',
+                                            children: {
+                                                'encrypt.sh': {
+                                                    type: 'file', perm: '755', owner: 'c1ph3r', group: 'c1ph3r', size: 421,
+                                                    modified: '2025-10-18 14:30',
+                                                    content: '#!/bin/bash\n# Encrypts a file with AES-256-CBC\n# Usage: ./encrypt.sh <file> <passphrase>\nopenssl enc -aes-256-cbc -salt -pbkdf2 -in "$1" -out "$1.enc" -pass pass:"$2"\necho "[+] Encrypted: $1 -> $1.enc"\nshred -u "$1"'
+                                                },
+                                                'wipe.sh': {
+                                                    type: 'file', perm: '755', owner: 'c1ph3r', group: 'c1ph3r', size: 288,
+                                                    modified: '2026-02-13 19:05',
+                                                    content: '#!/bin/bash\n# Secure wipe — 3 pass overwrite\nfor f in "$@"; do\n  shred -vzn 3 "$f"\n  rm -f "$f"\ndone\necho "[!] Wipe complete. No recovery possible."'
+                                                },
+                                                'keygen.py': {
+                                                    type: 'file', perm: '644', owner: 'c1ph3r', group: 'c1ph3r', size: 512,
+                                                    modified: '2025-09-27 08:11',
+                                                    content: '#!/usr/bin/env python3\n"""Generate ephemeral keypair for dead drops."""\nimport hashlib, os, sys\n\ndef gen():\n    entropy = os.urandom(32)\n    h = hashlib.sha256(entropy).hexdigest()\n    print(f"PUB: {h[:32]}")\n    print(f"PRV: {h[32:]}")\n    print("// distruggi questa chiave dopo l\'uso")\n\nif __name__ == "__main__":\n    gen()'
+                                                }
+                                            }
+                                        },
+                                        '.vault': {
+                                            type: 'dir', perm: '700', owner: 'c1ph3r', group: 'c1ph3r', size: 4096,
+                                            modified: '2026-02-14 03:38',
+                                            children: {
+                                                'seed.key': {
+                                                    type: 'file', perm: '000', owner: 'c1ph3r', group: 'c1ph3r', size: 64,
+                                                    modified: '2026-02-14 03:38',
+                                                    content: '// SEED WORD #8\n// BIP-39 position: 488'
+                                                },
+                                                'manifest.txt': {
+                                                    type: 'file', perm: '644', owner: 'c1ph3r', group: 'c1ph3r', size: 198,
+                                                    modified: '2026-02-14 03:35',
+                                                    content: 'Frammenti distribuiti: 12\nFrammenti recuperabili da questa macchina: 1\n\nIl file è protetto. Sai cosa fare.\nSe non lo sai, non meriti di leggerlo.'
+                                                }
+                                            }
+                                        },
+                                        '.bash_history': {
+                                            type: 'file', perm: '600', owner: 'c1ph3r', group: 'c1ph3r', size: 2841,
+                                            modified: '2026-02-14 03:41',
+                                            content: [
+                                                'ssh -D 9050 -C -N relay3@185.220.101.34',
+                                                'curl -x socks5h://127.0.0.1:9050 http://check.torproject.org',
+                                                'nmap -sS -T2 -p 8333 10.0.0.0/24',
+                                                'cat /var/log/auth.log | grep "Failed password"',
+                                                'iptables -A INPUT -s 203.0.113.0/24 -j DROP',
+                                                'openssl genrsa -aes256 -out node-key.pem 4096',
+                                                'openssl req -new -x509 -key node-key.pem -out node-cert.pem -days 365',
+                                                'bitcoind -daemon -listen=0 -connect=127.0.0.1:9050',
+                                                'bitcoin-cli getblockchaininfo',
+                                                'bitcoin-cli getpeerinfo | grep addr',
+                                                'tail -f ~/.bitcoin/debug.log',
+                                                'gpg --gen-key --batch gpg-params.txt',
+                                                'gpg --armor --export 0xC1PH3R > pubkey.asc',
+                                                'sha256sum backup-2026-01-*.tar.gz',
+                                                'python3 keygen.py > /dev/null',
+                                                'tor --verify-config -f /etc/tor/torrc',
+                                                'systemctl restart tor',
+                                                'ss -tlnp | grep 9050',
+                                                'df -h /dev/sda1',
+                                                'du -sh /home/c1ph3r/*',
+                                                'find / -name "*.log" -mtime -1 2>/dev/null',
+                                                'cat /etc/hostname',
+                                                'ls -la /tmp',
+                                                'shred -vzn 7 /tmp/session-*.tmp',
+                                                'dd if=/dev/urandom of=/tmp/noise.bin bs=1M count=64',
+                                                'openssl enc -aes-256-cbc -salt -pbkdf2 -in wallet.dat -out wallet.dat.enc',
+                                                'shred -u wallet.dat',
+                                                'mv wallet.dat.enc /mnt/usb/cold/',
+                                                'umount /mnt/usb',
+                                                'echo "dead drop compromised" | gpg -e -r 0xA7F3B2 > msg.gpg',
+                                                'scp -o ProxyCommand="nc -x 127.0.0.1:9050 %h %p" msg.gpg relay7:/incoming/',
+                                                'cd notes',
+                                                'cat dead-drop.txt',
+                                                'cd ..',
+                                                'cd scripts',
+                                                'chmod +x wipe.sh',
+                                                './wipe.sh /tmp/noise.bin',
+                                                'cd ..',
+                                                'ls -la',
+                                                'cd .vault',
+                                                'ls -l',
+                                                'chmod 000 seed.key',
+                                                'cat manifest.txt',
+                                                'cd ..',
+                                                'cat /var/log/syslog | tail -20',
+                                                'ps aux | grep bitcoin',
+                                                'kill -9 4827',
+                                                'bitcoin-cli stop',
+                                                'systemctl stop tor',
+                                                'iptables -F',
+                                                'iptables -P INPUT DROP',
+                                                'iptables -P OUTPUT DROP',
+                                                'iptables -P FORWARD DROP',
+                                                'echo "[!] network killed"',
+                                                'shred -vzn 3 ~/.ssh/known_hosts',
+                                                'shred -vzn 3 ~/.gnupg/private-keys-v1.d/*',
+                                                'rm -rf /tmp/*',
+                                                'history -c',
+                                                'logout'
+                                            ].join('\n')
+                                        },
+                                        '.bashrc': {
+                                            type: 'file', perm: '644', owner: 'c1ph3r', group: 'c1ph3r', size: 78,
+                                            modified: '2025-06-01 00:00',
+                                            content: '# ~/.bashrc\nexport PS1="c1ph3r@onion-route:\\w$ "\nalias ll="ls -la"'
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        'tmp': {
+                            type: 'dir', perm: '1777', owner: 'root', group: 'root', size: 4096,
+                            modified: '2026-02-14 02:00',
+                            children: {
+                                'dump.hex': {
+                                    type: 'file', perm: '644', owner: 'nobody', group: 'nogroup', size: 1048,
+                                    modified: '2026-02-13 23:59',
+                                    content: '00000000  4e 6f 6e 20 63 27 c3 a8  6e 69 65 6e 74 65 20 71  |Non c\'..niente q|\n00000010  75 69 2e 20 43 65 72 63  61 20 61 6c 74 72 6f 76  |ui. Cerca altrov|\n00000020  65 2e                                             |e.|'
+                                }
+                            }
+                        },
+                        'etc': {
+                            type: 'dir', perm: '755', owner: 'root', group: 'root', size: 4096,
+                            modified: '2025-08-01 00:00',
+                            children: {
+                                'hostname': {
+                                    type: 'file', perm: '644', owner: 'root', group: 'root', size: 12,
+                                    modified: '2025-08-01 00:00',
+                                    content: 'onion-route'
+                                },
+                                'motd': {
+                                    type: 'file', perm: '644', owner: 'root', group: 'root', size: 180,
+                                    modified: '2025-08-01 00:00',
+                                    content: '  ___        _                ____             _       \n / _ \\ _ __ (_) ___  _ __   |  _ \\ ___  _   _| |_ ___ \n| | | | \'_ \\| |/ _ \\| \'_ \\  | |_) / _ \\| | | | __/ _ \\\n| |_| | | | | | (_) | | | | |  _ < (_) | |_| | ||  __/\n \\___/|_| |_|_|\\___/|_| |_| |_| \\_\\___/ \\__,_|\\__\\___|'
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+            // ── Shell State ─────────────────────────────────────────────────────
+
+            let cwd = '/home/c1ph3r';
+            const HOME = '/home/c1ph3r';
+            const USER = 'c1ph3r';
+            const HOSTNAME = 'onion-route';
+
+            const outputArea = document.getElementById('output-area');
+            const cmdInput = document.getElementById('cmd-input');
+            const promptLabel = document.getElementById('prompt-label');
+
+            const history = [];
+            let historyIdx = -1;
+
+            // ── Path Utilities ──────────────────────────────────────────────────
+
+            function resolvePath(p) {
+                if (!p) return cwd;
+                let base = p.startsWith('/') ? '' : cwd;
+                let full = base ? base + '/' + p : p;
+                const parts = full.split('/').filter(Boolean);
+                const resolved = [];
+                for (const part of parts) {
+                    if (part === '.') continue;
+                    if (part === '..') { resolved.pop(); continue; }
+                    resolved.push(part);
+                }
+                return '/' + resolved.join('/');
+            }
+
+            function getNode(path) {
+                if (path === '/') return FS['/'];
+                const parts = path.split('/').filter(Boolean);
+                let node = FS['/'];
+                for (const p of parts) {
+                    if (!node || node.type !== 'dir' || !node.children || !(p in node.children)) return null;
+                    node = node.children[p];
+                }
+                return node;
+            }
+
+            function getDisplayPath(path) {
+                if (path === HOME) return '~';
+                if (path.startsWith(HOME + '/')) return '~' + path.slice(HOME.length);
+                return path;
+            }
+
+            // ── Output Helpers ──────────────────────────────────────────────────
+
+            function printLine(text, cls = 'out') {
+                const div = document.createElement('div');
+                div.className = 'line ' + cls;
+                div.textContent = text;
+                outputArea.appendChild(div);
+            }
+
+            function printHTML(html, cls = 'out') {
+                const div = document.createElement('div');
+                div.className = 'line ' + cls;
+                div.innerHTML = html;
+                outputArea.appendChild(div);
+            }
+
+            function printPromptEcho(cmd) {
+                const path = getDisplayPath(cwd);
+                const html = `<span class="prompt-color">${USER}@${HOSTNAME}</span>:<span class="path-color">${path}</span>$ <span class="cmd-color">${escapeHTML(cmd)}</span>`;
+                printHTML(html, 'cmd');
+            }
+
+            function escapeHTML(s) {
+                return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            }
+
+            function scrollToBottom() {
+                requestAnimationFrame(() => {
+                    outputArea.scrollTop = outputArea.scrollHeight;
+                });
+            }
+
+            // ── Permission Helpers ──────────────────────────────────────────────
+
+            function permToString(octal, isDir) {
+                const n = parseInt(octal, 8);
+                const bits = [
+                    (n >> 6) & 7,
+                    (n >> 3) & 7,
+                    n & 7
+                ];
+                let s = isDir ? 'd' : '-';
+                for (const b of bits) {
+                    s += (b & 4) ? 'r' : '-';
+                    s += (b & 2) ? 'w' : '-';
+                    s += (b & 1) ? 'x' : '-';
+                }
+                return s;
+            }
+
+            function colorizePerms(permStr) {
+                let html = '';
+                for (const ch of permStr) {
+                    switch (ch) {
+                        case 'd': html += `<span class="perm-d">d</span>`; break;
+                        case 'r': html += `<span class="perm-r">r</span>`; break;
+                        case 'w': html += `<span class="perm-w">w</span>`; break;
+                        case 'x': html += `<span class="perm-x">x</span>`; break;
+                        default: html += `<span class="perm-dash">-</span>`; break;
+                    }
+                }
+                return html;
+            }
+
+            function colorizeFilename(name, node) {
+                const hidden = name.startsWith('.');
+                if (node.type === 'dir') {
+                    return `<span class="${hidden ? 'file-hidden' : 'file-dir'}">${escapeHTML(name)}/</span>`;
+                }
+                // Check executable
+                const p = parseInt(node.perm, 8);
+                if (p & 0o111) {
+                    return `<span class="file-exec">${escapeHTML(name)}</span>`;
+                }
+                return `<span class="${hidden ? 'file-hidden' : 'file-normal'}">${escapeHTML(name)}</span>`;
+            }
+
+            // ── ls Command ──────────────────────────────────────────────────────
+
+            function cmdLs(args) {
+                let showAll = false;
+                let longFormat = false;
+                let targetPath = null;
+
+                for (const a of args) {
+                    if (a.startsWith('-')) {
+                        if (a.includes('a')) showAll = true;
+                        if (a.includes('l')) longFormat = true;
+                    } else {
+                        targetPath = a;
+                    }
+                }
+
+                const path = resolvePath(targetPath);
+                const node = getNode(path);
+
+                if (!node) {
+                    printLine(`ls: impossibile accedere a '${targetPath}': file o directory non trovata`, 'err');
+                    return;
+                }
+
+                if (node.type !== 'dir') {
+                    // ls on a single file
+                    if (longFormat) {
+                        printLsLongEntry(targetPath || path.split('/').pop(), node);
+                    } else {
+                        printHTML(colorizeFilename(targetPath || path.split('/').pop(), node));
+                    }
+                    return;
+                }
+
+                const entries = Object.keys(node.children);
+                let names = showAll ? entries : entries.filter(n => !n.startsWith('.'));
+                names.sort((a, b) => {
+                    // Directories first, then alpha
+                    const aDir = node.children[a].type === 'dir' ? 0 : 1;
+                    const bDir = node.children[b].type === 'dir' ? 0 : 1;
+                    if (aDir !== bDir) return aDir - bDir;
+                    return a.localeCompare(b);
+                });
+
+                if (showAll) {
+                    // Add . and ..
+                    names = ['.', '..', ...names];
+                }
+
+                if (longFormat) {
+                    // total line
+                    const totalBlocks = names.filter(n => n !== '.' && n !== '..').reduce((acc, n) => {
+                        const child = node.children[n];
+                        return acc + (child ? Math.ceil((child.size || 0) / 1024) * 4 : 0);
+                    }, 0);
+                    printLine(`total ${totalBlocks}`, 'dim');
+
+                    for (const name of names) {
+                        if (name === '.') {
+                            printLsLongLine('.', node);
+                        } else if (name === '..') {
+                            // Get parent
+                            const parentPath = path === '/' ? '/' : resolvePath(path + '/..');
+                            const parentNode = getNode(parentPath) || node;
+                            printLsLongLine('..', parentNode);
+                        } else {
+                            printLsLongLine(name, node.children[name]);
+                        }
+                    }
+                } else {
+                    // Simple listing — columns
+                    const parts = [];
+                    for (const name of names) {
+                        if (name === '.' || name === '..') {
+                            parts.push(`<span class="file-dir">${name}</span>`);
+                        } else {
+                            parts.push(colorizeFilename(name, node.children[name]));
+                        }
+                    }
+                    if (parts.length > 0) {
+                        printHTML(parts.join('  '));
+                    }
+                }
+            }
+
+            function printLsLongLine(name, node) {
+                const permStr = permToString(node.perm, node.type === 'dir');
+                const links = node.type === 'dir' ? (node.children ? Object.keys(node.children).length + 2 : 2) : 1;
+                const owner = padRight(node.owner, 8);
+                const group = padRight(node.group, 8);
+                const size = padLeft(String(node.size), 6);
+                const date = node.modified;
+
+                let nameHtml;
+                if (name === '.' || name === '..') {
+                    nameHtml = `<span class="file-dir">${name}</span>`;
+                } else {
+                    nameHtml = colorizeFilename(name, node);
+                }
+
+                const html = `${colorizePerms(permStr)} <span class="dim">${links}</span> <span class="owner-col">${owner}</span> <span class="owner-col">${group}</span> <span class="size-col">${size}</span> <span class="date-col">${date}</span> ${nameHtml}`;
+                printHTML(html);
+            }
+
+            function padRight(s, n) { return s + ' '.repeat(Math.max(0, n - s.length)); }
+            function padLeft(s, n) { return ' '.repeat(Math.max(0, n - s.length)) + s; }
+
+            // ── pwd Command ─────────────────────────────────────────────────────
+
+            function cmdPwd() {
+                printLine(cwd);
+            }
+
+            // ── cd Command ──────────────────────────────────────────────────────
+
+            function cmdCd(args) {
+                const target = args[0] || '~';
+                let dest;
+
+                if (target === '~' || target === '') {
+                    dest = HOME;
+                } else if (target === '-') {
+                    printLine('cd: OLDPWD non impostato', 'err');
+                    return;
+                } else {
+                    dest = resolvePath(target);
+                }
+
+                const node = getNode(dest);
+
+                if (!node) {
+                    printLine(`cd: ${target}: directory non trovata`, 'err');
+                    return;
+                }
+
+                if (node.type !== 'dir') {
+                    printLine(`cd: ${target}: non è una directory`, 'err');
+                    return;
+                }
+
+                cwd = dest;
+            }
+
+            // ── cat Command ─────────────────────────────────────────────────────
+
+            function cmdCat(args) {
+                if (args.length === 0) {
+                    printLine('cat: argomento mancante', 'err');
+                    return;
+                }
+
+                for (const arg of args) {
+                    if (arg.startsWith('-')) continue;
+
+                    const path = resolvePath(arg);
+                    const node = getNode(path);
+
+                    if (!node) {
+                        printLine(`cat: ${arg}: file non trovato`, 'err');
+                        continue;
+                    }
+
+                    if (node.type === 'dir') {
+                        printLine(`cat: ${arg}: è una directory`, 'err');
+                        continue;
+                    }
+
+                    // Permission check — owner read bit
+                    const ownerBits = (parseInt(node.perm, 8) >> 6) & 7;
+                    const canRead = (ownerBits & 4) !== 0;
+
+                    if (!canRead) {
+                        printLine(`cat: ${arg}: permesso negato`, 'err');
+                        continue;
+                    }
+
+                    // Check if this is the seed file — special reveal
+                    if (path === '/home/c1ph3r/.vault/seed.key') {
+                        printLine('', 'out');
+                        printLine('╔════════════════════════════════╗', 'reveal-border');
+                        printLine('║   SEED WORD #8 — DECRYPTED     ║', 'reveal');
+                        printLine('║                                ║', 'reveal-border');
+                        printLine('║   BIP-39 position: 488         ║', 'reveal-num');
+                        printLine('║                                ║', 'reveal-border');
+                        printLine('╚════════════════════════════════╝', 'reveal-border');
+                        printLine('', 'out');
+                        continue;
+                    }
+
+                    // Print content
+                    const lines = node.content.split('\n');
+                    for (const line of lines) {
+                        printLine(line);
+                    }
+                }
+            }
+
+            // ── chmod Command ───────────────────────────────────────────────────
+
+            function cmdChmod(args) {
+                if (args.length < 2) {
+                    printLine('chmod: argomenti mancanti — uso: chmod <modo> <file>', 'err');
+                    return;
+                }
+
+                const mode = args[0];
+                const target = args[1];
+                const path = resolvePath(target);
+                const node = getNode(path);
+
+                if (!node) {
+                    printLine(`chmod: ${target}: file non trovato`, 'err');
+                    return;
+                }
+
+                if (node.type === 'dir') {
+                    printLine(`chmod: ${target}: operazione non supportata sulle directory`, 'err');
+                    return;
+                }
+
+                // Parse symbolic modes: +r, +rw, +rx, +rwx, -r, -w, -x, etc.
+                const symbolicMatch = mode.match(/^([+-])([rwx]+)$/);
+                if (symbolicMatch) {
+                    const op = symbolicMatch[1];
+                    const chars = symbolicMatch[2];
+                    let current = parseInt(node.perm, 8);
+
+                    let bits = 0;
+                    if (chars.includes('r')) bits |= 0o444;
+                    if (chars.includes('w')) bits |= 0o222;
+                    if (chars.includes('x')) bits |= 0o111;
+
+                    if (op === '+') {
+                        current |= bits;
+                    } else {
+                        current &= ~bits;
+                    }
+
+                    node.perm = current.toString(8).padStart(3, '0');
+                    return;
+                }
+
+                // Parse octal mode: 644, 755, 400, etc.
+                const octalMatch = mode.match(/^[0-7]{3,4}$/);
+                if (octalMatch) {
+                    const oct = mode.slice(-3);
+                    node.perm = oct;
+                    return;
+                }
+
+                printLine(`chmod: modo non valido: '${mode}'`, 'err');
+                printLine('  Formati accettati: +r, +rw, -x, 644, 755, ...', 'dim');
+            }
+
+            // ── history Command ─────────────────────────────────────────────────
+
+            function cmdHistory() {
+                const histFile = getNode('/home/c1ph3r/.bash_history');
+                if (histFile && histFile.content) {
+                    const lines = histFile.content.split('\n');
+                    lines.forEach((line, i) => {
+                        printLine(`  ${padLeft(String(i + 1), 4)}  ${line}`, 'dim');
+                    });
+                }
+            }
+
+            // ── whoami / id / uname ─────────────────────────────────────────────
+
+            function cmdWhoami() {
+                printLine(USER);
+            }
+
+            function cmdId() {
+                printLine(`uid=1000(${USER}) gid=1000(${USER}) groups=1000(${USER})`);
+            }
+
+            function cmdUname(args) {
+                if (args.includes('-a')) {
+                    printLine('Linux onion-route 5.15.0-94-generic #104-Ubuntu SMP x86_64 GNU/Linux');
+                } else {
+                    printLine('Linux');
+                }
+            }
+
+            // ── echo Command ────────────────────────────────────────────────────
+
+            function cmdEcho(args) {
+                printLine(args.join(' '));
+            }
+
+            // ── grep Command (simplified) ───────────────────────────────────────
+
+            function cmdGrep(args) {
+                if (args.length < 2) {
+                    printLine('grep: uso: grep <pattern> <file>', 'err');
+                    return;
+                }
+
+                const pattern = args[0];
+                const target = args[1];
+                const path = resolvePath(target);
+                const node = getNode(path);
+
+                if (!node) {
+                    printLine(`grep: ${target}: file non trovato`, 'err');
+                    return;
+                }
+
+                if (node.type === 'dir') {
+                    printLine(`grep: ${target}: è una directory`, 'err');
+                    return;
+                }
+
+                const ownerBits = (parseInt(node.perm, 8) >> 6) & 7;
+                if (!(ownerBits & 4)) {
+                    printLine(`grep: ${target}: permesso negato`, 'err');
+                    return;
+                }
+
+                const lines = node.content.split('\n');
+                let found = false;
+                for (const line of lines) {
+                    if (line.toLowerCase().includes(pattern.toLowerCase())) {
+                        // Highlight match
+                        const idx = line.toLowerCase().indexOf(pattern.toLowerCase());
+                        const before = escapeHTML(line.slice(0, idx));
+                        const match = escapeHTML(line.slice(idx, idx + pattern.length));
+                        const after = escapeHTML(line.slice(idx + pattern.length));
+                        printHTML(`${before}<span style="color:#ff3333;font-weight:700">${match}</span>${after}`);
+                        found = true;
+                    }
+                }
+                if (!found) {
+                    // No output, like real grep
+                }
+            }
+
+            // ── file Command ────────────────────────────────────────────────────
+
+            function cmdFile(args) {
+                if (args.length === 0) {
+                    printLine('file: argomento mancante', 'err');
+                    return;
+                }
+
+                const target = args[0];
+                const path = resolvePath(target);
+                const node = getNode(path);
+
+                if (!node) {
+                    printLine(`file: ${target}: file non trovato`, 'err');
+                    return;
+                }
+
+                if (node.type === 'dir') {
+                    printLine(`${target}: directory`);
+                } else if (node.perm === '000') {
+                    printLine(`${target}: regular file (permessi insufficienti per l'analisi)`);
+                } else if (target.endsWith('.sh')) {
+                    printLine(`${target}: Bourne-Again shell script, ASCII text executable`);
+                } else if (target.endsWith('.py')) {
+                    printLine(`${target}: Python script, UTF-8 Unicode text executable`);
+                } else if (target.endsWith('.hex')) {
+                    printLine(`${target}: ASCII text (hex dump)`);
+                } else if (target.endsWith('.key')) {
+                    printLine(`${target}: ASCII text`);
+                } else {
+                    printLine(`${target}: ASCII text`);
+                }
+            }
+
+            // ── Command Router ──────────────────────────────────────────────────
+
+            function execCommand(raw) {
+                const trimmed = raw.trim();
+                if (!trimmed) return;
+
+                printPromptEcho(trimmed);
+
+                // Parse
+                const parts = trimmed.split(/\s+/);
+                const cmd = parts[0];
+                const args = parts.slice(1);
+
+                switch (cmd) {
+                    case 'ls':
+                        cmdLs(args);
+                        break;
+                    case 'pwd':
+                        cmdPwd();
+                        break;
+                    case 'cd':
+                        cmdCd(args);
+                        break;
+                    case 'cat':
+                        cmdCat(args);
+                        break;
+                    case 'chmod':
+                        cmdChmod(args);
+                        break;
+                    case 'history':
+                        cmdHistory();
+                        break;
+                    case 'whoami':
+                        cmdWhoami();
+                        break;
+                    case 'id':
+                        cmdId();
+                        break;
+                    case 'uname':
+                        cmdUname(args);
+                        break;
+                    case 'echo':
+                        cmdEcho(args);
+                        break;
+                    case 'clear':
+                        outputArea.innerHTML = '';
+                        break;
+                    case 'help':
+                        printLine('Comandi disponibili:', 'info');
+                        printLine('  ls [-l] [-a] [dir]    elenca file e directory', 'dim');
+                        printLine('  cd <dir>              cambia directory', 'dim');
+                        printLine('  cat <file>            mostra il contenuto di un file', 'dim');
+                        printLine('  chmod <modo> <file>   cambia i permessi di un file', 'dim');
+                        printLine('  pwd                   mostra la directory corrente', 'dim');
+                        printLine('  history               mostra la cronologia dei comandi', 'dim');
+                        printLine('  whoami                mostra l\'utente corrente', 'dim');
+                        printLine('  id                    mostra UID e gruppi', 'dim');
+                        printLine('  uname [-a]            informazioni di sistema', 'dim');
+                        printLine('  echo <testo>          stampa testo', 'dim');
+                        printLine('  clear                 pulisce lo schermo', 'dim');
+                        printLine('  help                  mostra questo messaggio', 'dim');
+                        break;
+                    case 'sudo':
+                        printLine(`[sudo] password per ${USER}: `, 'out');
+                        printLine(`${USER} non è nel file sudoers. Questo incidente verrà segnalato.`, 'err');
+                        break;
+                    case 'rm':
+                    case 'rmdir':
+                    case 'mv':
+                    case 'cp':
+                    case 'mkdir':
+                    case 'touch':
+                    case 'nano':
+                    case 'vi':
+                    case 'vim':
+                        printLine(`${cmd}: operazione di scrittura non consentita — filesystem in modalità protetta`, 'err');
+                        break;
+                    case 'exit':
+                    case 'logout':
+                        printLine('Logout non consentito — sessione ripristinata da snapshot.', 'err');
+                        break;
+                    case 'ssh':
+                    case 'ping':
+                    case 'curl':
+                    case 'wget':
+                        printLine(`${cmd}: rete non disponibile — tutte le interfacce sono state disabilitate`, 'err');
+                        break;
+                    case 'grep':
+                        cmdGrep(args);
+                        break;
+                    case 'file':
+                        cmdFile(args);
+                        break;
+                    case 'll':
+                        cmdLs(['-la', ...args]);
+                        break;
+                    default:
+                        printLine(`${cmd}: comando non trovato. Digita 'help' per la lista dei comandi.`, 'err');
+                }
+
+                scrollToBottom();
+            }
+
+            // ── Prompt ───────────────────────────────────────────────────────────
+
+            function updatePrompt() {
+                const path = getDisplayPath(cwd);
+                promptLabel.textContent = `${USER}@${HOSTNAME}:${path}$ `;
+            }
+
+            // ── Input Handling ──────────────────────────────────────────────────
+
+            const COMMANDS = ['ls', 'cd', 'cat', 'chmod', 'pwd', 'history', 'whoami', 'id', 'uname', 'echo', 'clear', 'help', 'grep', 'file', 'll'];
+
+            function tabComplete(input) {
+                const val = input.value;
+                const cursorPos = input.selectionStart;
+                const beforeCursor = val.slice(0, cursorPos);
+                const parts = beforeCursor.split(/\s+/);
+
+                if (parts.length <= 1) {
+                    // Complete command name
+                    const prefix = parts[0] || '';
+                    const matches = COMMANDS.filter(c => c.startsWith(prefix) && c !== prefix);
+                    if (matches.length === 1) {
+                        input.value = matches[0] + ' ' + val.slice(cursorPos);
+                        input.selectionStart = input.selectionEnd = matches[0].length + 1;
+                    }
+                    return;
+                }
+
+                // Complete file/directory path
+                const partial = parts[parts.length - 1];
+
+                // Split into directory part and name prefix
+                let dirPart, namePrefix;
+                const lastSlash = partial.lastIndexOf('/');
+                if (lastSlash >= 0) {
+                    dirPart = partial.slice(0, lastSlash) || '/';
+                    namePrefix = partial.slice(lastSlash + 1);
+                } else {
+                    dirPart = null;
+                    namePrefix = partial;
+                }
+
+                const lookupDir = dirPart ? resolvePath(dirPart) : cwd;
+                const dirNode = getNode(lookupDir);
+                if (!dirNode || dirNode.type !== 'dir' || !dirNode.children) return;
+
+                const candidates = Object.keys(dirNode.children).filter(n => {
+                    if (!n.startsWith(namePrefix)) return false;
+                    // Don't complete hidden files unless explicitly typing the dot
+                    if (n.startsWith('.') && !namePrefix.startsWith('.')) return false;
+                    return true;
+                });
+                if (candidates.length === 0) return;
+
+                if (candidates.length === 1) {
+                    const match = candidates[0];
+                    const matchNode = dirNode.children[match];
+                    const completed = (dirPart ? dirPart + '/' : '') + match + (matchNode.type === 'dir' ? '/' : '');
+                    // Reconstruct the input
+                    const prefix = parts.slice(0, -1).join(' ') + ' ';
+                    const after = val.slice(cursorPos);
+                    input.value = prefix + completed + after;
+                    input.selectionStart = input.selectionEnd = prefix.length + completed.length;
+                } else {
+                    // Find longest common prefix among candidates
+                    let common = candidates[0];
+                    for (let i = 1; i < candidates.length; i++) {
+                        let j = 0;
+                        while (j < common.length && j < candidates[i].length && common[j] === candidates[i][j]) j++;
+                        common = common.slice(0, j);
+                    }
+                    if (common.length > namePrefix.length) {
+                        const completed = (dirPart ? dirPart + '/' : '') + common;
+                        const prefix = parts.slice(0, -1).join(' ') + ' ';
+                        const after = val.slice(cursorPos);
+                        input.value = prefix + completed + after;
+                        input.selectionStart = input.selectionEnd = prefix.length + completed.length;
+                    } else {
+                        // Show candidates in output
+                        printPromptEcho(val);
+                        const display = candidates.map(n => {
+                            const nd = dirNode.children[n];
+                            return nd.type === 'dir'
+                                ? `<span class="file-dir">${escapeHTML(n)}/</span>`
+                                : `<span class="file-normal">${escapeHTML(n)}</span>`;
+                        });
+                        printHTML(display.join('  '));
+                        scrollToBottom();
+                    }
+                }
+            }
+
+            cmdInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    tabComplete(cmdInput);
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const val = cmdInput.value;
+                    if (val.trim()) {
+                        history.unshift(val);
+                        if (history.length > 50) history.pop();
+                    }
+                    historyIdx = -1;
+                    execCommand(val);
+                    cmdInput.value = '';
+                    updatePrompt();
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (historyIdx < history.length - 1) {
+                        historyIdx++;
+                        cmdInput.value = history[historyIdx];
+                    }
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (historyIdx > 0) {
+                        historyIdx--;
+                        cmdInput.value = history[historyIdx];
+                    } else {
+                        historyIdx = -1;
+                        cmdInput.value = '';
+                    }
+                }
+            });
+
+            // Focus input on tap anywhere
+            document.getElementById('terminal').addEventListener('click', function () {
+                cmdInput.focus();
+            });
+
+            // ── Boot Sequence ───────────────────────────────────────────────────
+
+            function boot() {
+                const lines = [
+                    { text: '[SYSTEM] Restoring session from snapshot...', cls: 'dim', delay: 0 },
+                    { text: '[SYSTEM] Filesystem mounted (read-write)', cls: 'dim', delay: 400 },
+                    { text: '[SYSTEM] User: c1ph3r — UID 1000', cls: 'dim', delay: 700 },
+                    { text: '[SYSTEM] Last login: 2026-02-14 03:41 UTC from 127.0.0.1', cls: 'dim', delay: 1000 },
+                    { text: '', cls: 'out', delay: 1200 },
+                    { text: '  "Cypherpunks write code." — Eric Hughes, 1993', cls: 'info', delay: 1400 },
+                    { text: '', cls: 'out', delay: 1500 },
+                    { text: 'Digita \'help\' per la lista dei comandi disponibili.', cls: 'dim', delay: 1700 },
+                    { text: '', cls: 'out', delay: 1800 },
+                ];
+
+                cmdInput.disabled = true;
+
+                lines.forEach(({ text, cls, delay }) => {
+                    setTimeout(() => {
+                        printLine(text, cls);
+                        scrollToBottom();
+                    }, delay);
+                });
+
+                setTimeout(() => {
+                    cmdInput.disabled = false;
+                    cmdInput.focus();
+                    updatePrompt();
+                }, 2000);
+            }
+
+            boot();
+
+        })();
+    </script>
+</body>
+
+</html>
