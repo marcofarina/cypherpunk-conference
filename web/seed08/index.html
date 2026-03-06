@@ -99,6 +99,7 @@
         #output-area {
             flex: 1;
             overflow-y: auto;
+            overflow-x: auto;
             padding: 8px 12px;
             -webkit-overflow-scrolling: touch;
             scrollbar-width: thin;
@@ -119,8 +120,8 @@
         }
 
         .line {
-            white-space: pre-wrap;
-            word-break: break-all
+            white-space: pre;
+            word-break: normal
         }
 
         .line.cmd {
@@ -329,7 +330,7 @@
 
             html,
             body {
-                font-size: 12px
+                font-size: 11.5px
             }
 
             #header {
@@ -342,6 +343,14 @@
 
             #input-area {
                 padding: 6px 8px
+            }
+
+            #cmd-input {
+                font-size: 11.5px
+            }
+
+            #prompt-label {
+                font-size: 11.5px
             }
         }
     </style>
@@ -764,10 +773,9 @@
             function printLsLongLine(name, node) {
                 const permStr = permToString(node.perm, node.type === 'dir');
                 const links = node.type === 'dir' ? (node.children ? Object.keys(node.children).length + 2 : 2) : 1;
-                const owner = padRight(node.owner, 8);
-                const group = padRight(node.group, 8);
-                const size = padLeft(String(node.size), 6);
-                const date = node.modified;
+                const owner = padRight(node.owner, 7);
+                const size = padLeft(String(node.size), 5);
+                const date = shortDate(node.modified);
 
                 let nameHtml;
                 if (name === '.' || name === '..') {
@@ -776,8 +784,18 @@
                     nameHtml = colorizeFilename(name, node);
                 }
 
-                const html = `${colorizePerms(permStr)} <span class="dim">${links}</span> <span class="owner-col">${owner}</span> <span class="owner-col">${group}</span> <span class="size-col">${size}</span> <span class="date-col">${date}</span> ${nameHtml}`;
+                const html = `${colorizePerms(permStr)} ${links} <span class="owner-col">${owner}</span> <span class="size-col">${size}</span> <span class="date-col">${date}</span> ${nameHtml}`;
                 printHTML(html);
+            }
+
+            function shortDate(d) {
+                // "2026-02-14 03:38" → "Feb 14 03:38"
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                const parts = d.split(/[- :]/);
+                const mon = months[parseInt(parts[1], 10) - 1] || '???';
+                const day = padLeft(String(parseInt(parts[2], 10)), 2);
+                const time = parts[3] + ':' + parts[4];
+                return mon + ' ' + day + ' ' + time;
             }
 
             function padRight(s, n) { return s + ' '.repeat(Math.max(0, n - s.length)); }
