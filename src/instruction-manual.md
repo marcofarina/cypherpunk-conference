@@ -116,7 +116,7 @@ seed 6
 
 ## PROTOCOLLO DI DISINNESCO — MODULO ALPHA
 
-`// frammento decriptato — archivio 0xC1PH3R — integrità: 55% //`
+`// frammento decriptato — archivio 0xC1PH3R — integrità: 78% //`
 
 Non fidarti del pulsante. Un pulsante che ti dice di premerlo è esattamente il tipo di trappola che piazzerei io. Segui il protocollo o perdi tutto.
 
@@ -260,13 +260,13 @@ Quando pensi di aver trovato la parola corretta, impostala negli slot e premi **
 ### Lista password
 
 ```
-about   above   again   alpha   arena
-birth   black   brain   catch   chalk
-clean   crane   dance   equal   fault
-floor   grace   guard   ivory   knife
-large   magic   metal   nurse   other
-peace   place   power   right   scale
-skull   space   stone   thing   world
+about   after   again   below   could
+every   first   found   great   house
+large   learn   never   other   place
+plant   point   right   small   sound
+spell   still   study   their   there
+these   thing   think   three   water
+where   which   world   would   write
 ```
 
 `// fine frammento — una sola parola, nessun margine d'errore. //`
