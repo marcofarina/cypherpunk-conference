@@ -1,0 +1,416 @@
+{
+  "meta": {
+    "version": "2.0",
+    "description": "Pool di criteri per indovinello 12 — Turing Machine. Fonte unica di verità.",
+    "range": [1, 2048],
+    "active_per_session": 5,
+    "max_queries_per_test": 3,
+    "note_cifre": "Le cifre sono quelle della scrittura decimale senza zeri iniziali. Per le posizioni: U = unità, D = decine, C = centinaia, M = migliaia. Se la posizione non esiste (es. migliaia per il numero 503), la cifra è 0."
+  },
+  "blocks": {
+    "numero_intero": "Il numero intero",
+    "cifre_singole": "Cifre singole",
+    "confronti": "Confronti tra cifre",
+    "somma": "Somma delle cifre",
+    "struttura": "Conteggi e struttura",
+    "cifre_specifiche": "Intervalli specifici per cifra",
+    "aritmetica": "Proprietà aritmetiche"
+  },
+  "criteria": {
+    "01": {
+      "name": "Fascia alta",
+      "description": "Il numero è:",
+      "options": {
+        "a": "≤ 682",
+        "b": "tra 683 e 1365",
+        "c": "≥ 1366"
+      },
+      "block": "numero_intero"
+    },
+    "02": {
+      "name": "Fascia media",
+      "description": "Il numero è:",
+      "options": {
+        "a": "< 500",
+        "b": "tra 500 e 999",
+        "c": "≥ 1000"
+      },
+      "block": "numero_intero"
+    },
+    "03": {
+      "name": "Parità",
+      "description": "Il numero è:",
+      "options": {
+        "a": "pari",
+        "b": "dispari"
+      },
+      "block": "numero_intero"
+    },
+    "04": {
+      "name": "Divisibilità per 3",
+      "description": "Il numero è divisibile per 3:",
+      "options": {
+        "a": "sì",
+        "b": "no"
+      },
+      "block": "numero_intero"
+    },
+    "05": {
+      "name": "Divisibilità per 5",
+      "description": "Il numero è divisibile per 5:",
+      "options": {
+        "a": "sì",
+        "b": "no"
+      },
+      "block": "numero_intero"
+    },
+    "06": {
+      "name": "Struttura di parità",
+      "description": "Il numero è:",
+      "options": {
+        "a": "divisibile per 4",
+        "b": "pari, ma non divisibile per 4",
+        "c": "dispari"
+      },
+      "block": "numero_intero"
+    },
+    "07": {
+      "name": "Unità vs soglia",
+      "description": "La cifra delle unità è:",
+      "options": {
+        "a": "minore di 4 (cioè 0, 1, 2 o 3)",
+        "b": "tra 4 e 6",
+        "c": "maggiore di 6 (cioè 7, 8 o 9)"
+      },
+      "block": "cifre_singole"
+    },
+    "08": {
+      "name": "Unità parità",
+      "description": "La cifra delle unità è:",
+      "options": {
+        "a": "pari (0, 2, 4, 6 o 8)",
+        "b": "dispari (1, 3, 5, 7 o 9)"
+      },
+      "block": "cifre_singole"
+    },
+    "09": {
+      "name": "Decine vs soglia",
+      "description": "La cifra delle decine è:",
+      "options": {
+        "a": "minore di 4 (cioè 0, 1, 2 o 3)",
+        "b": "tra 4 e 6",
+        "c": "maggiore di 6 (cioè 7, 8 o 9)"
+      },
+      "block": "cifre_singole"
+    },
+    "10": {
+      "name": "Decine parità",
+      "description": "La cifra delle decine è:",
+      "options": {
+        "a": "pari (incluso 0)",
+        "b": "dispari"
+      },
+      "block": "cifre_singole"
+    },
+    "11": {
+      "name": "Centinaia vs soglia",
+      "description": "La cifra delle centinaia è:",
+      "options": {
+        "a": "minore di 4 (cioè 0, 1, 2 o 3)",
+        "b": "tra 4 e 6",
+        "c": "maggiore di 6 (cioè 7, 8 o 9)"
+      },
+      "block": "cifre_singole"
+    },
+    "12": {
+      "name": "Centinaia parità",
+      "description": "La cifra delle centinaia è:",
+      "options": {
+        "a": "pari (incluso 0)",
+        "b": "dispari"
+      },
+      "block": "cifre_singole"
+    },
+    "13": {
+      "name": "U vs D",
+      "description": "La cifra delle unità rispetto a quella delle decine:",
+      "options": {
+        "a": "unità è maggiore",
+        "b": "sono uguali",
+        "c": "unità è minore"
+      },
+      "block": "confronti"
+    },
+    "14": {
+      "name": "C vs U",
+      "description": "La cifra delle centinaia rispetto a quella delle unità:",
+      "options": {
+        "a": "centinaia è maggiore",
+        "b": "sono uguali",
+        "c": "centinaia è minore"
+      },
+      "block": "confronti"
+    },
+    "15": {
+      "name": "C vs D",
+      "description": "La cifra delle centinaia rispetto a quella delle decine:",
+      "options": {
+        "a": "centinaia è maggiore",
+        "b": "sono uguali",
+        "c": "centinaia è minore"
+      },
+      "block": "confronti"
+    },
+    "16": {
+      "name": "Cifra massima",
+      "description": "La cifra più grande del codice (tra tutte le cifre come scritto) è:",
+      "options": {
+        "a": "≤ 4",
+        "b": "5 o 6",
+        "c": "≥ 7"
+      },
+      "block": "confronti"
+    },
+    "17": {
+      "name": "Somma fascia",
+      "description": "La somma di tutte le cifre del codice (come scritto) è:",
+      "options": {
+        "a": "≤ 10",
+        "b": "tra 11 e 20",
+        "c": "maggiore di 20"
+      },
+      "block": "somma"
+    },
+    "18": {
+      "name": "Somma parità",
+      "description": "La somma di tutte le cifre del codice è:",
+      "options": {
+        "a": "pari",
+        "b": "dispari"
+      },
+      "block": "somma"
+    },
+    "19": {
+      "name": "Somma divisibilità per 3",
+      "description": "La somma di tutte le cifre del codice è divisibile per 3:",
+      "options": {
+        "a": "sì",
+        "b": "no"
+      },
+      "block": "somma"
+    },
+    "20": {
+      "name": "Somma parziale U+D",
+      "description": "La somma della cifra delle unità e di quella delle decine è:",
+      "options": {
+        "a": "≤ 5",
+        "b": "tra 6 e 10",
+        "c": "maggiore di 10"
+      },
+      "block": "somma"
+    },
+    "21": {
+      "name": "Equilibrio pari/dispari",
+      "description": "Tra le cifre del codice (come scritto, senza zeri iniziali):",
+      "options": {
+        "a": "ci sono più cifre pari che dispari",
+        "b": "il numero di cifre pari è uguale a quello di cifre dispari",
+        "c": "ci sono più cifre dispari che pari"
+      },
+      "block": "struttura"
+    },
+    "22": {
+      "name": "Ripetizioni",
+      "description": "Le cifre del codice (come scritto, senza zeri iniziali):",
+      "options": {
+        "a": "sono tutte diverse tra loro",
+        "b": "almeno una cifra compare due o più volte"
+      },
+      "block": "struttura"
+    },
+    "23": {
+      "name": "Presenza dello zero",
+      "description": "Il codice contiene almeno uno 0:",
+      "options": {
+        "a": "sì",
+        "b": "no"
+      },
+      "block": "struttura"
+    },
+    "24": {
+      "name": "Cifra minima",
+      "description": "La cifra più piccola del codice (come scritto) è:",
+      "options": {
+        "a": "0",
+        "b": "1 o 2",
+        "c": "3 o più"
+      },
+      "block": "struttura"
+    },
+    "25": {
+      "name": "Numero di cifre",
+      "description": "Il codice è composto da:",
+      "options": {
+        "a": "1 o 2 cifre (cioè è tra 1 e 99)",
+        "b": "3 cifre (cioè è tra 100 e 999)",
+        "c": "4 cifre (cioè è tra 1000 e 2048)"
+      },
+      "block": "struttura"
+    },
+    "26": {
+      "name": "Unità fine",
+      "description": "La cifra delle unità è:",
+      "options": {
+        "a": "tra 0 e 2",
+        "b": "tra 3 e 5",
+        "c": "tra 6 e 9"
+      },
+      "block": "cifre_specifiche"
+    },
+    "27": {
+      "name": "Decine fine",
+      "description": "La cifra delle decine è:",
+      "options": {
+        "a": "tra 0 e 2",
+        "b": "tra 3 e 5",
+        "c": "tra 6 e 9"
+      },
+      "block": "cifre_specifiche"
+    },
+    "28": {
+      "name": "Centinaia fine",
+      "description": "La cifra delle centinaia è:",
+      "options": {
+        "a": "tra 0 e 2",
+        "b": "tra 3 e 5",
+        "c": "tra 6 e 9"
+      },
+      "block": "cifre_specifiche"
+    },
+    "29": {
+      "name": "Resto mod 7",
+      "description": "Il resto della divisione del codice per 7 è:",
+      "options": {
+        "a": "0 (il codice è multiplo di 7)",
+        "b": "tra 1 e 3",
+        "c": "tra 4 e 6"
+      },
+      "block": "aritmetica"
+    },
+    "30": {
+      "name": "Resto mod 8",
+      "description": "Il resto della divisione del codice per 8 è:",
+      "options": {
+        "a": "tra 0 e 2",
+        "b": "tra 3 e 5",
+        "c": "6 o 7"
+      },
+      "block": "aritmetica"
+    },
+    "31": {
+      "name": "Differenza C−U",
+      "description": "La differenza in valore assoluto tra la cifra delle centinaia e quella delle unità è:",
+      "options": {
+        "a": "0 o 1",
+        "b": "tra 2 e 4",
+        "c": "tra 5 e 9"
+      },
+      "block": "aritmetica"
+    },
+    "32": {
+      "name": "Somma C+U",
+      "description": "La somma della cifra delle centinaia e di quella delle unità è:",
+      "options": {
+        "a": "≤ 4",
+        "b": "tra 5 e 9",
+        "c": "≥ 10"
+      },
+      "block": "aritmetica"
+    },
+    "33": {
+      "name": "Somma C+D",
+      "description": "La somma della cifra delle centinaia e di quella delle decine è:",
+      "options": {
+        "a": "≤ 3",
+        "b": "tra 4 e 8",
+        "c": "≥ 9"
+      },
+      "block": "aritmetica"
+    },
+    "34": {
+      "name": "Prodotto cifre",
+      "description": "Il prodotto di tutte le cifre del codice (come scritto) è:",
+      "options": {
+        "a": "0 (almeno una cifra è 0)",
+        "b": "tra 1 e 20",
+        "c": "maggiore di 20"
+      },
+      "block": "aritmetica"
+    },
+    "35": {
+      "name": "Resto mod 11",
+      "description": "Il resto della divisione del codice per 11 è:",
+      "options": {
+        "a": "0 (il codice è multiplo di 11)",
+        "b": "tra 1 e 5",
+        "c": "tra 6 e 10"
+      },
+      "block": "aritmetica"
+    },
+    "36": {
+      "name": "Somma cifre mod 4",
+      "description": "Il resto della divisione della somma delle cifre per 4 è:",
+      "options": {
+        "a": "0",
+        "b": "1",
+        "c": "2 o 3"
+      },
+      "block": "aritmetica"
+    },
+    "37": {
+      "name": "Ordine cifre",
+      "description": "Le cifre del codice (come scritto, senza zeri iniziali) sono:",
+      "options": {
+        "a": "in ordine strettamente crescente (es. 1 → 3 → 7)",
+        "b": "in ordine strettamente decrescente (es. 9 → 5 → 2)",
+        "c": "in nessun ordine particolare"
+      },
+      "block": "struttura"
+    },
+    "38": {
+      "name": "Contiene 5",
+      "description": "Il codice contiene la cifra 5:",
+      "options": {
+        "a": "sì",
+        "b": "no"
+      },
+      "block": "struttura"
+    },
+    "39": {
+      "name": "Contiene 3",
+      "description": "Il codice contiene la cifra 3:",
+      "options": {
+        "a": "sì",
+        "b": "no"
+      },
+      "block": "struttura"
+    },
+    "40": {
+      "name": "Unità mod 3",
+      "description": "Il resto della divisione della cifra delle unità per 3 è:",
+      "options": {
+        "a": "0 (la cifra è 0, 3, 6 o 9)",
+        "b": "1 (la cifra è 1, 4 o 7)",
+        "c": "2 (la cifra è 2, 5 o 8)"
+      },
+      "block": "cifre_specifiche"
+    }
+  },
+  "redundant_pairs": [
+    ["03", "06"], ["03", "08"], ["07", "08"], ["07", "26"], ["08", "26"],
+    ["09", "10"], ["09", "27"], ["10", "27"], ["11", "12"], ["11", "28"],
+    ["12", "28"], ["23", "24"], ["23", "34"], ["24", "34"], ["01", "02"],
+    ["17", "18"], ["17", "36"], ["18", "36"], ["04", "19"], ["07", "40"],
+    ["26", "40"], ["38", "28"], ["38", "11"], ["20", "32"]
+  ]
+}

@@ -1,0 +1,416 @@
+/* Cypherpunk 2140 — Indovinello 12: Turing Machine — Stile condiviso */
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Share+Tech+Mono&display=swap');
+
+:root {
+  --bg: #0a0a0a;
+  --bg-panel: #0f0f0f;
+  --bg-input: #111111;
+  --green: #00ff41;
+  --green-dim: #00cc33;
+  --green-dark: #003300;
+  --amber: #ffb000;
+  --amber-dim: #cc8800;
+  --red: #ff3333;
+  --red-dim: #991111;
+  --white: #cccccc;
+  --grey: #555555;
+  --grey-dark: #333333;
+  --font-mono: 'JetBrains Mono', 'Share Tech Mono', monospace;
+  --scanline: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 255, 65, 0.03) 2px,
+    rgba(0, 255, 65, 0.03) 4px
+  );
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--green);
+  font-family: var(--font-mono);
+  font-weight: 400;
+  line-height: 1.5;
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: var(--scanline);
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ── Layout ── */
+
+.container {
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 16px 12px 80px;
+}
+
+/* ── Header ── */
+
+.header {
+  text-align: center;
+  padding: 16px 0 12px;
+  border-bottom: 1px solid var(--green-dark);
+  margin-bottom: 20px;
+}
+
+.header__title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--green);
+  text-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+}
+
+.header__sub {
+  font-size: 0.7rem;
+  color: var(--grey);
+  letter-spacing: 0.1em;
+  margin-top: 4px;
+}
+
+/* ── Pannelli ── */
+
+.panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--green-dark);
+  border-radius: 4px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+.panel__label {
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: var(--amber);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+/* ── Input numerico ── */
+
+.num-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.num-input__field {
+  flex: 1;
+  background: var(--bg-input);
+  border: 1px solid var(--green-dark);
+  border-radius: 3px;
+  color: var(--green);
+  font-family: var(--font-mono);
+  font-size: 1.4rem;
+  font-weight: 700;
+  text-align: center;
+  padding: 10px 8px;
+  outline: none;
+  letter-spacing: 0.1em;
+  -moz-appearance: textfield;
+}
+
+.num-input__field::-webkit-inner-spin-button,
+.num-input__field::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+}
+
+.num-input__field:focus {
+  border-color: var(--green-dim);
+  box-shadow: 0 0 8px rgba(0, 255, 65, 0.2);
+}
+
+.num-input__range {
+  font-size: 0.65rem;
+  color: var(--grey);
+  white-space: nowrap;
+}
+
+/* ── Verificatori (toggle) ── */
+
+.verifiers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.verifier-btn {
+  flex: 1 1 calc(33% - 8px);
+  min-width: 80px;
+  background: var(--bg-input);
+  border: 1px solid var(--grey-dark);
+  border-radius: 3px;
+  color: var(--grey);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 10px 6px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.verifier-btn.selected {
+  border-color: var(--green-dim);
+  color: var(--green);
+  background: var(--green-dark);
+}
+
+.verifier-btn.disabled {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.verifier-btn .v-id {
+  display: block;
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.verifier-btn .v-name {
+  display: block;
+  font-size: 0.6rem;
+  color: var(--amber-dim);
+  letter-spacing: 0.05em;
+}
+
+.verifier-btn.selected .v-name {
+  color: var(--amber);
+}
+
+/* ── Risultati interrogazione ── */
+
+.results {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.result-slot {
+  flex: 1 1 calc(33% - 8px);
+  min-width: 80px;
+  text-align: center;
+  padding: 8px 6px;
+  border-radius: 3px;
+  border: 1px solid var(--grey-dark);
+  font-size: 0.7rem;
+}
+
+.result-slot .r-id {
+  display: block;
+  font-size: 0.65rem;
+  color: var(--grey);
+  margin-bottom: 4px;
+}
+
+.result-slot .r-icon {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.result-slot.pass {
+  border-color: var(--green-dark);
+}
+.result-slot.pass .r-icon {
+  color: var(--green);
+  text-shadow: 0 0 8px rgba(0, 255, 65, 0.6);
+}
+
+.result-slot.fail {
+  border-color: var(--red-dim);
+}
+.result-slot.fail .r-icon {
+  color: var(--red);
+  text-shadow: 0 0 8px rgba(255, 51, 51, 0.4);
+}
+
+.result-slot.idle {
+  border-color: transparent;
+}
+.result-slot.idle .r-icon {
+  color: var(--grey-dark);
+}
+
+/* ── Bottoni ── */
+
+.btn {
+  display: block;
+  width: 100%;
+  background: var(--green-dark);
+  border: 1px solid var(--green-dim);
+  border-radius: 3px;
+  color: var(--green);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn:active {
+  background: var(--green-dim);
+  color: var(--bg);
+}
+
+.btn:disabled {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.btn--amber {
+  background: rgba(255, 176, 0, 0.1);
+  border-color: var(--amber-dim);
+  color: var(--amber);
+}
+
+.btn--amber:active {
+  background: var(--amber);
+  color: var(--bg);
+}
+
+.btn--red {
+  background: rgba(255, 51, 51, 0.1);
+  border-color: var(--red-dim);
+  color: var(--red);
+}
+
+/* ── Contatore ── */
+
+.counter {
+  text-align: center;
+  font-size: 0.7rem;
+  color: var(--grey);
+  padding: 8px 0;
+  letter-spacing: 0.08em;
+}
+
+.counter__num {
+  color: var(--amber);
+  font-weight: 700;
+}
+
+/* ── QR ── */
+
+.qr-section {
+  text-align: center;
+}
+
+.qr-section canvas,
+.qr-section img {
+  display: inline-block;
+  border: 2px solid var(--green-dark);
+  border-radius: 4px;
+  background: #ffffff;
+  padding: 8px;
+}
+
+.qr-section__url {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.55rem;
+  color: var(--grey);
+  word-break: break-all;
+  line-height: 1.4;
+}
+
+.qr-section__hint {
+  font-size: 0.7rem;
+  color: var(--green-dim);
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+/* ── Decode overlay ── */
+
+.decode-success {
+  text-align: center;
+  padding: 20px 10px;
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+.decode-success__word {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--green);
+  text-shadow: 0 0 20px rgba(0, 255, 65, 0.8), 0 0 40px rgba(0, 255, 65, 0.4);
+  letter-spacing: 0.2em;
+}
+
+.decode-success__pos {
+  font-size: 0.8rem;
+  color: var(--amber);
+  margin-top: 8px;
+}
+
+.error-msg {
+  text-align: center;
+  color: var(--red);
+  font-size: 0.75rem;
+  margin-top: 8px;
+  min-height: 1.2em;
+}
+
+.cooldown-msg {
+  text-align: center;
+  color: var(--amber-dim);
+  font-size: 0.7rem;
+  margin-top: 6px;
+}
+
+/* ── Stato nascosto ── */
+
+.hidden { display: none !important; }
+
+/* ── Animazioni ── */
+
+@keyframes glowPulse {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.2); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 360px) {
+  .container { padding: 12px 8px 60px; }
+  .num-input__field { font-size: 1.2rem; }
+  .verifier-btn { min-width: 70px; padding: 8px 4px; }
+}

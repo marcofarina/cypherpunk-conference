@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>TURING-ORACLE // 0xC1PH3R</title>
+<link rel="stylesheet" href="app.css">
+<style>
+  #qrContainer { display: flex; justify-content: center; }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="criteria.js"></script>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="header">
+    <div class="header__title">Turing-Oracle</div>
+    <div class="header__sub">// 0xC1PH3R — protocollo di verifica //</div>
+  </div>
+
+  <!-- Fase 1: QR code per il companion -->
+  <div class="panel qr-section" id="panelQR">
+    <div class="panel__label">Collegamento manuale</div>
+    <div class="qr-section__hint">
+      Scansiona il codice con un secondo dispositivo.<br>
+      Lì troverai le specifiche dei verificatori attivi.
+    </div>
+    <div id="qrContainer"></div>
+    <span class="qr-section__url" id="companionUrl"></span>
+    <button class="btn" style="margin-top: 14px" id="btnStartGame">Procedi</button>
+  </div>
+
+  <!-- Fase 2: Interfaccia di gioco -->
+  <div id="gameArea" class="hidden">
+
+    <div class="panel">
+      <div class="panel__label">Codice candidato</div>
+      <div class="num-input">
+        <input type="number" class="num-input__field" id="codeInput"
+               min="1" max="2048" placeholder="—" inputmode="numeric">
+        <span class="num-input__range">1 – 2048</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel__label">Seleziona verificatori <span id="selCount">(0 / 3)</span></div>
+      <div class="verifiers" id="verifierBtns"></div>
+    </div>
+
+    <button class="btn" id="btnQuery" disabled>Interroga</button>
+
+    <div class="panel hidden" id="panelResults">
+      <div class="panel__label">Risposte</div>
+      <div class="results" id="resultsArea"></div>
+    </div>
+
+    <div class="counter">
+      Interrogazioni: <span class="counter__num" id="queryCount">0</span>
+    </div>
+
+    <div style="border-top: 1px solid var(--grey-dark); margin: 16px 0;"></div>
+
+    <div class="panel">
+      <div class="panel__label">Decodifica finale</div>
+      <div class="num-input" style="margin-bottom: 10px">
+        <input type="number" class="num-input__field" id="decodeInput"
+               min="1" max="2048" placeholder="—" inputmode="numeric">
+        <span class="num-input__range">1 – 2048</span>
+      </div>
+      <button class="btn btn--amber" id="btnDecode">Decodifica</button>
+      <div class="error-msg" id="decodeError"></div>
+      <div class="cooldown-msg" id="cooldownMsg"></div>
+    </div>
+
+    <div class="panel hidden" id="panelSuccess">
+      <div class="decode-success">
+        <div class="panel__label">Parola recuperata</div>
+        <div class="decode-success__word" id="successWord"></div>
+        <div class="decode-success__pos" id="successPos"></div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+"use strict";
+
+(() => {
+
+  const STORAGE_KEY = "cp2140_s12";
+
+  let GAME_CFG = {};
+  let CONFIGS  = [];
+  let NAMES    = {};
+
+  let activeConfig = [];
+  let targetAnswers = {};
+  let selectedVerifiers = [];
+  let queryCount = 0;
+  let decoded = false;
+  let cooldownEnd = 0;
+  let failCount = 0;
+
+  /* ── Persistenza ── */
+
+  function saveState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        target: GAME_CFG.target,
+        config: activeConfig,
+        queryCount: queryCount,
+        failCount: failCount,
+        cooldownEnd: cooldownEnd,
+        decoded: decoded
+      }));
+    } catch (e) {}
+  }
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      const s = JSON.parse(raw);
+      if (!Array.isArray(s.config) || s.config.length === 0) return null;
+      if (s.target !== GAME_CFG.target) return null;
+      const valid = CONFIGS.some(
+        c => c.length === s.config.length && c.every((v, i) => v === s.config[i])
+      );
+      return valid ? s : null;
+    } catch (e) { return null; }
+  }
+
+  /* ── Init ── */
+
+  function init() {
+    const saved = loadState();
+
+    if (saved) {
+      activeConfig = saved.config;
+      queryCount   = saved.queryCount || 0;
+      failCount    = saved.failCount || 0;
+      cooldownEnd  = saved.cooldownEnd || 0;
+      decoded      = saved.decoded || false;
+    } else {
+      activeConfig = CONFIGS[Math.floor(Math.random() * CONFIGS.length)];
+    }
+
+    for (const cid of activeConfig) {
+      targetAnswers[cid] = Criteria.evaluate(cid, GAME_CFG.target);
+    }
+
+    saveState();
+    generateQR();
+    buildVerifierButtons();
+    bindEvents();
+
+    document.getElementById("queryCount").textContent = queryCount;
+
+    if (decoded) {
+      document.getElementById("panelQR").classList.add("hidden");
+      document.getElementById("gameArea").classList.remove("hidden");
+      showSuccess();
+    }
+
+    if (!decoded && cooldownEnd > Date.now()) startCooldownTimer();
+  }
+
+  /* ── QR ── */
+
+  function generateQR() {
+    const ids = activeConfig.map(id => String(id).padStart(2, "0"));
+    const base = GAME_CFG.companionBaseUrl || "./companion.html";
+    const resolved = base.startsWith("./")
+      ? window.location.href.replace(/[^/]*$/, "") + base.slice(2)
+      : base;
+    const url = resolved + (resolved.includes("?") ? "&" : "?") + "c=" + ids.join(",");
+
+    document.getElementById("companionUrl").textContent = url;
+
+    try {
+      new QRCode(document.getElementById("qrContainer"), {
+        text: url, width: 180, height: 180,
+        colorDark: "#0a0a0a", colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    } catch (e) {
+      document.getElementById("qrContainer").innerHTML =
+        '<div style="padding:20px;color:var(--amber);font-size:0.7rem">' +
+        'QR non disponibile — usa l\'URL in basso</div>';
+    }
+  }
+
+  /* ── Verificatori ── */
+
+  function buildVerifierButtons() {
+    const c = document.getElementById("verifierBtns");
+    c.innerHTML = "";
+    for (const cid of activeConfig) {
+      const btn = document.createElement("button");
+      btn.className = "verifier-btn";
+      btn.dataset.cid = cid;
+      btn.innerHTML =
+        '<span class="v-id">#' + String(cid).padStart(2, "0") + '</span>' +
+        '<span class="v-name">' + (NAMES[cid] || "") + '</span>';
+      btn.addEventListener("click", () => toggleVerifier(cid, btn));
+      c.appendChild(btn);
+    }
+  }
+
+  function toggleVerifier(cid, btn) {
+    if (decoded) return;
+    const idx = selectedVerifiers.indexOf(cid);
+    if (idx >= 0) { selectedVerifiers.splice(idx, 1); btn.classList.remove("selected"); }
+    else { if (selectedVerifiers.length >= 3) return; selectedVerifiers.push(cid); btn.classList.add("selected"); }
+    updateSelectionUI();
+  }
+
+  function updateSelectionUI() {
+    const n = selectedVerifiers.length;
+    document.getElementById("selCount").textContent = "(" + n + " / 3)";
+    const code = parseInt(document.getElementById("codeInput").value);
+    document.getElementById("btnQuery").disabled = n === 0 || isNaN(code) || code < 1 || code > 2048;
+    document.querySelectorAll(".verifier-btn").forEach(btn => {
+      const cid = parseInt(btn.dataset.cid);
+      selectedVerifiers.includes(cid)
+        ? btn.classList.remove("disabled")
+        : btn.classList.toggle("disabled", n >= 3);
+    });
+  }
+
+  /* ── Interrogazione ── */
+
+  function doQuery() {
+    const code = parseInt(document.getElementById("codeInput").value);
+    if (isNaN(code) || code < 1 || code > 2048 || selectedVerifiers.length === 0) return;
+    queryCount++;
+    document.getElementById("queryCount").textContent = queryCount;
+    saveState();
+
+    const area = document.getElementById("resultsArea");
+    area.innerHTML = "";
+    for (const cid of activeConfig) {
+      const slot = document.createElement("div");
+      const q = selectedVerifiers.includes(cid);
+      if (q) {
+        const pass = Criteria.evaluate(cid, code) === targetAnswers[cid];
+        slot.className = "result-slot " + (pass ? "pass" : "fail") + " fade-in";
+        slot.innerHTML = '<span class="r-id">#' + String(cid).padStart(2,"0") + '</span>' +
+          '<span class="r-icon">' + (pass ? "✓" : "✗") + '</span>';
+      } else {
+        slot.className = "result-slot idle";
+        slot.innerHTML = '<span class="r-id">#' + String(cid).padStart(2,"0") + '</span>' +
+          '<span class="r-icon">—</span>';
+      }
+      area.appendChild(slot);
+    }
+    document.getElementById("panelResults").classList.remove("hidden");
+    selectedVerifiers = [];
+    document.querySelectorAll(".verifier-btn").forEach(b => b.classList.remove("selected","disabled"));
+    updateSelectionUI();
+  }
+
+  /* ── Decodifica ── */
+
+  function doDecode() {
+    if (decoded) return;
+    if (Date.now() < cooldownEnd) {
+      document.getElementById("cooldownMsg").textContent =
+        "Attendi " + Math.ceil((cooldownEnd - Date.now()) / 1000) + "s prima di riprovare.";
+      return;
+    }
+    const code = parseInt(document.getElementById("decodeInput").value);
+    if (isNaN(code) || code < 1 || code > 2048) {
+      document.getElementById("decodeError").textContent = "Inserisci un numero tra 1 e 2048.";
+      return;
+    }
+    if (code === GAME_CFG.target) {
+      decoded = true; saveState(); showSuccess();
+    } else {
+      failCount++;
+      const secs = Math.min(30 * failCount, 120);
+      cooldownEnd = Date.now() + secs * 1000;
+      saveState();
+      document.getElementById("decodeError").textContent = "Codice errato. La macchina si resetta.";
+      document.getElementById("cooldownMsg").textContent = "Prossimo tentativo tra " + secs + "s.";
+      startCooldownTimer();
+    }
+  }
+
+  function showSuccess() {
+    document.getElementById("successWord").textContent = GAME_CFG.targetWord;
+    document.getElementById("successPos").textContent = "Posizione BIP-39: " + GAME_CFG.target;
+    document.getElementById("panelSuccess").classList.remove("hidden");
+    document.getElementById("decodeError").textContent = "";
+    document.getElementById("cooldownMsg").textContent = "";
+    document.getElementById("btnDecode").disabled = true;
+    document.getElementById("panelSuccess").scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  function startCooldownTimer() {
+    const iv = setInterval(() => {
+      const rem = Math.ceil((cooldownEnd - Date.now()) / 1000);
+      if (rem <= 0) {
+        document.getElementById("cooldownMsg").textContent = "";
+        document.getElementById("decodeError").textContent = "";
+        clearInterval(iv);
+      } else {
+        document.getElementById("cooldownMsg").textContent = "Prossimo tentativo tra " + rem + "s.";
+      }
+    }, 1000);
+  }
+
+  /* ── Eventi ── */
+
+  function bindEvents() {
+    document.getElementById("btnStartGame").addEventListener("click", () => {
+      document.getElementById("panelQR").classList.add("hidden");
+      document.getElementById("gameArea").classList.remove("hidden");
+      document.getElementById("gameArea").classList.add("fade-in");
+    });
+    document.getElementById("codeInput").addEventListener("input", updateSelectionUI);
+    document.getElementById("btnQuery").addEventListener("click", doQuery);
+    document.getElementById("btnDecode").addEventListener("click", doDecode);
+    document.getElementById("codeInput").addEventListener("keydown", e => {
+      if (e.key === "Enter") { e.preventDefault(); if (!document.getElementById("btnQuery").disabled) doQuery(); }
+    });
+    document.getElementById("decodeInput").addEventListener("keydown", e => {
+      if (e.key === "Enter") { e.preventDefault(); doDecode(); }
+    });
+  }
+
+  /* ── Boot asincrono ── */
+
+  async function boot() {
+    try {
+      const [cfgRes, poolRes] = await Promise.all([
+        fetch("game_config.json"),
+        fetch("criteria_pool.json")
+      ]);
+      if (!cfgRes.ok) throw new Error("game_config.json: HTTP " + cfgRes.status);
+      GAME_CFG = await cfgRes.json();
+
+      if (poolRes.ok) {
+        const pool = await poolRes.json();
+        for (const [id, c] of Object.entries(pool.criteria))
+          NAMES[parseInt(id)] = c.name;
+      }
+
+      const padded = String(GAME_CFG.target).padStart(4, "0");
+      const conRes = await fetch("configs/" + padded + ".json");
+      if (!conRes.ok) throw new Error("configs/" + padded + ".json non trovato. Target " + GAME_CFG.target + " non ha configurazioni valide.");
+      CONFIGS = (await conRes.json()).configs;
+
+      init();
+    } catch (err) {
+      console.error("Errore di avvio:", err);
+      document.querySelector(".container").innerHTML =
+        '<div class="header"><div class="header__title">Turing-Oracle</div></div>' +
+        '<div class="panel" style="margin-top:20px;text-align:center">' +
+        '<div style="color:var(--red);font-size:0.8rem;line-height:1.6">' +
+        'Errore nel caricamento.<br>' + err.message + '</div></div>';
+    }
+  }
+
+  boot();
+
+})();
+</script>
+
+</body>
+</html>

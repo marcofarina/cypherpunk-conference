@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>TURING-ORACLE // MANUALE</title>
+<link rel="stylesheet" href="app.css">
+<style>
+  .criteria-list { display: flex; flex-direction: column; gap: 12px; }
+
+  .criterion {
+    background: var(--bg-panel);
+    border: 1px solid var(--green-dark);
+    border-radius: 4px;
+    padding: 12px 14px;
+  }
+
+  .criterion__header {
+    display: flex; align-items: baseline; gap: 10px;
+    margin-bottom: 8px; padding-bottom: 6px;
+    border-bottom: 1px solid var(--grey-dark);
+  }
+
+  .criterion__id {
+    font-size: 1rem; font-weight: 700; color: var(--amber);
+    white-space: nowrap; letter-spacing: 0.05em;
+  }
+
+  .criterion__name {
+    font-size: 0.75rem; font-weight: 500; color: var(--green);
+    letter-spacing: 0.08em; text-transform: uppercase;
+  }
+
+  .criterion__desc {
+    font-size: 0.75rem; color: var(--white);
+    margin-bottom: 10px; line-height: 1.5;
+  }
+
+  .options { display: flex; flex-direction: column; gap: 6px; }
+
+  .option {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px; background: var(--bg-input);
+    border: 1px solid var(--grey-dark); border-radius: 3px;
+  }
+
+  .option__letter {
+    font-size: 0.85rem; font-weight: 700; color: var(--amber);
+    width: 22px; text-align: center; flex-shrink: 0;
+  }
+
+  .option__text { font-size: 0.8rem; color: var(--green-dim); line-height: 1.4; }
+
+  .intro {
+    font-size: 0.72rem; color: var(--grey); line-height: 1.6;
+    margin-bottom: 16px; padding-bottom: 12px;
+    border-bottom: 1px solid var(--grey-dark);
+  }
+  .intro strong { color: var(--green-dim); font-weight: 500; }
+  .intro em { color: var(--amber-dim); font-style: normal; }
+
+  .error-panel { text-align: center; padding: 40px 20px; }
+  .error-panel__icon { font-size: 2rem; margin-bottom: 12px; }
+  .error-panel__msg { font-size: 0.8rem; color: var(--red); line-height: 1.6; }
+
+  .legend {
+    margin-top: 16px; padding: 12px;
+    border: 1px solid var(--grey-dark); border-radius: 4px;
+    background: var(--bg-panel);
+  }
+  .legend__title {
+    font-size: 0.65rem; font-weight: 500; color: var(--amber-dim);
+    letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px;
+  }
+  .legend__text { font-size: 0.68rem; color: var(--grey); line-height: 1.6; }
+  .legend__text code { color: var(--green-dim); font-weight: 500; }
+  .legend__example {
+    margin-top: 8px; padding: 8px 10px; background: var(--bg-input);
+    border-radius: 3px; font-size: 0.68rem; color: var(--white); line-height: 1.7;
+  }
+  .legend__example span { color: var(--amber); font-weight: 700; }
+
+  .loading { text-align: center; padding: 40px 20px; color: var(--green-dim); font-size: 0.8rem; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <div class="header__title">Turing-Oracle</div>
+    <div class="header__sub">// manuale dei verificatori //</div>
+  </div>
+  <div id="content"><div class="loading">Caricamento protocolli…</div></div>
+</div>
+
+<script>
+"use strict";
+
+(() => {
+
+  function parseURL() {
+    const params = new URLSearchParams(window.location.search);
+    const raw = params.get("c");
+    if (!raw) return null;
+    const ids = raw.split(",").map(s => s.trim()).filter(Boolean);
+    return ids.length > 0 ? ids : null;
+  }
+
+  function esc(s) {
+    const el = document.createElement("span");
+    el.textContent = s;
+    return el.innerHTML;
+  }
+
+  function render(activeIds, pool) {
+    const content = document.getElementById("content");
+
+    if (!activeIds || !pool) {
+      content.innerHTML =
+        '<div class="panel error-panel">' +
+          '<div class="error-panel__icon">⚠</div>' +
+          '<div class="error-panel__msg">' +
+            'Nessun verificatore trovato.<br>Scansiona il QR code dalla macchina principale.' +
+          '</div></div>';
+      return;
+    }
+
+    const validIds = activeIds.filter(id => pool[id]);
+    if (validIds.length === 0) {
+      content.innerHTML =
+        '<div class="panel error-panel">' +
+          '<div class="error-panel__icon">⚠</div>' +
+          '<div class="error-panel__msg">Verificatori non riconosciuti.</div>' +
+        '</div>';
+      return;
+    }
+
+    let html = '<div class="intro">' +
+      'Questa sessione utilizza <strong>' + validIds.length + ' verificatori</strong>. ' +
+      'Ciascuno verifica <em>una sola condizione</em> tra quelle elencate — ma non sai quale. ' +
+      'Il tuo compagno inserisce un codice candidato nella macchina e sceglie fino a 3 verificatori da interrogare. ' +
+      'Per ognuno, la macchina risponde <strong>✓</strong> se il candidato soddisfa la condizione attiva, ' +
+      '<strong>✗</strong> se non la soddisfa. ' +
+      'Dalle risposte, dovete dedurre quale condizione è attiva per ogni verificatore e trovare ' +
+      'l\'unico codice che le soddisfa tutte.</div>';
+
+    html += '<div class="criteria-list">';
+    for (const id of validIds) {
+      const c = pool[id];
+      html += '<div class="criterion"><div class="criterion__header">' +
+        '<span class="criterion__id">#' + id + '</span>' +
+        '<span class="criterion__name">' + esc(c.name) + '</span></div>' +
+        '<div class="criterion__desc">' + esc(c.description) + '</div>' +
+        '<div class="options">';
+      for (const key of Object.keys(c.options).sort()) {
+        html += '<div class="option">' +
+          '<span class="option__letter">' + key.toUpperCase() + '</span>' +
+          '<span class="option__text">' + esc(c.options[key]) + '</span></div>';
+      }
+      html += '</div></div>';
+    }
+    html += '</div>';
+
+    html += '<div class="legend"><div class="legend__title">Convenzioni sulle cifre</div>' +
+      '<div class="legend__text">' +
+      'Il codice è un numero da <code>1</code> a <code>2048</code>. ' +
+      'Le cifre posizionali si leggono dalla scrittura decimale:<br>' +
+      '<code>U</code> = unità, <code>D</code> = decine, <code>C</code> = centinaia, <code>M</code> = migliaia.<br>' +
+      'Se una posizione non esiste, la cifra corrispondente è <code>0</code>.<br>' +
+      'I criteri che parlano di «tutte le cifre» o «come scritto» usano solo le cifre effettive (senza zeri iniziali).</div>' +
+      '<div class="legend__example">' +
+      'Esempio: il codice <span>1503</span> ha M=<span>1</span>, C=<span>5</span>, D=<span>0</span>, U=<span>3</span><br>' +
+      'Esempio: il codice <span>42</span> ha M=<span>0</span>, C=<span>0</span>, D=<span>4</span>, U=<span>2</span><br>' +
+      'Le cifre «come scritto» di <span>1503</span> sono: 1, 5, 0, 3<br>' +
+      'Le cifre «come scritto» di <span>42</span> sono: 4, 2</div></div>';
+
+    content.innerHTML = html;
+  }
+
+  /* ── Avvio ── */
+
+  const activeIds = parseURL();
+
+  fetch("criteria_pool.json")
+    .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    .then(data => render(activeIds, data.criteria))
+    .catch(err => {
+      console.error("Errore caricamento pool:", err);
+      document.getElementById("content").innerHTML =
+        '<div class="panel error-panel"><div class="error-panel__icon">⚠</div>' +
+        '<div class="error-panel__msg">Errore nel caricamento dei protocolli.<br>' +
+        err.message + '</div></div>';
+    });
+
+})();
+</script>
+</body>
+</html>
