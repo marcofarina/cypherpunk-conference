@@ -256,9 +256,11 @@
             box-shadow: 0 1px 0 #0a0a00, 0 2px 4px rgba(0, 0, 0, 0.4);
         }
 
-        .mem-btn:not(.disabled):hover {
-            border-color: var(--amber);
-            box-shadow: 0 3px 0 #0a0a00, 0 0 12px rgba(255, 176, 0, 0.2);
+        @media (hover: hover) {
+            .mem-btn:not(.disabled):hover {
+                border-color: var(--amber);
+                box-shadow: 0 3px 0 #0a0a00, 0 0 12px rgba(255, 176, 0, 0.2);
+            }
         }
 
         .mem-btn.correct {
@@ -634,6 +636,7 @@
             /* Buttons */
             const buttons = btns();
             buttons.forEach((btn, i) => {
+                btn.blur();
                 btn.textContent = s.buttons[i];
                 btn.dataset.pos = i;
                 btn.dataset.label = s.buttons[i];
