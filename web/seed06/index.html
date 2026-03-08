@@ -932,8 +932,23 @@
         (function () {
             'use strict';
 
-            // ── CONFIGURAZIONE ──
-            var TIMER_SECONDS = 480; // 8 minuti — modificare qui per cambiare la durata
+            // ── CONFIGURAZIONE TIMER PROGRESSIVO ──
+            var TIMER_STORAGE_KEY = 'hm6_timer';
+
+            function getTimeoutCount() {
+                try {
+                    var c = parseInt(localStorage.getItem(TIMER_STORAGE_KEY));
+                    return isNaN(c) ? 0 : c;
+                } catch (e) { return 0; }
+            }
+
+            function setTimeoutCount(c) {
+                try { localStorage.setItem(TIMER_STORAGE_KEY, String(c)); } catch (e) { }
+            }
+
+            function getTimerSeconds() {
+                return 300 + getTimeoutCount() * 180; // 5 min + 3 min per ogni timeout
+            }
 
             var FINAL_WORD = atob('REFOQ0U=');
             var FINAL_INDEX = 443;
@@ -1023,13 +1038,14 @@
             // ── TIMER ──
             var timerValue = 0, timerInterval = null;
             function startTimer() {
-                timerValue = TIMER_SECONDS;
+                timerValue = getTimerSeconds();
                 updateTimerDisplay();
                 if (timerInterval) clearInterval(timerInterval);
                 timerInterval = setInterval(function () {
                     timerValue--;
                     if (timerValue < 0) {
                         clearInterval(timerInterval);
+                        setTimeoutCount(getTimeoutCount() + 1);
                         showFeedback('error', 'TIME OUT');
                         setTimeout(function () { fullReset(); }, 800);
                         return;
@@ -1528,7 +1544,10 @@
             }
 
             function clearLockoutOnSuccess() {
-                try { localStorage.removeItem(LOCKOUT_KEY); } catch (e) { }
+                try {
+                    localStorage.removeItem(LOCKOUT_KEY);
+                    localStorage.removeItem(TIMER_STORAGE_KEY);
+                } catch (e) { }
             }
 
             // ── INIT ──
