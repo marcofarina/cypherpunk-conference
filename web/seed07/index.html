@@ -248,6 +248,7 @@
             transition: all 0.1s;
             position: relative;
             box-shadow: 0 3px 0 #0a0a00, 0 4px 8px rgba(0, 0, 0, 0.4);
+            touch-action: manipulation;
         }
 
         .mem-btn:active {
@@ -900,11 +901,6 @@
             if (!btn || btn.classList.contains('disabled')) return;
             handlePress(parseInt(btn.dataset.pos, 10));
         });
-
-        /* Prevent double-tap zoom on iOS */
-        document.addEventListener('touchend', (e) => {
-            if (e.target.closest('.mem-btn')) e.preventDefault();
-        }, { passive: false });
 
         init();
     </script>
