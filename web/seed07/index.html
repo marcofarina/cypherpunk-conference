@@ -4,18 +4,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>0xC1PH3R — VAULT</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link
-        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Share+Tech+Mono&display=swap"
-        rel="stylesheet">
+    <title>MEM-CACHE // 0xC1PH3R</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Share+Tech+Mono&family=VT323&display=swap');
+
         *,
         *::before,
         *::after {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
         }
 
         :root {
@@ -24,22 +22,25 @@
             --green-dim: #00cc33;
             --green-dark: #003300;
             --amber: #ffb000;
-            --amber-dim: #cc8d00;
+            --amber-dim: #cc8800;
             --red: #ff2020;
             --red-dim: #cc1a1a;
-            --grey: #1a1a1a;
-            --grey-light: #2a2a2a;
-            --text-dim: #555;
+            --crt-line: rgba(0, 255, 65, 0.03);
+            --panel-bg: #111;
+            --panel-border: #1a1a1a;
+            --btn-bg: #1a1a0a;
+            --btn-border: #3a3a1a;
         }
 
         html,
         body {
-            height: 100%;
             background: var(--bg);
             color: var(--green);
             font-family: 'JetBrains Mono', 'Share Tech Mono', monospace;
-            overflow: hidden;
+            min-height: 100dvh;
+            overflow-x: hidden;
             -webkit-tap-highlight-color: transparent;
+            user-select: none;
         }
 
         body::after {
@@ -47,501 +48,333 @@
             position: fixed;
             inset: 0;
             background: repeating-linear-gradient(0deg,
-                    rgba(0, 0, 0, 0) 0px,
-                    rgba(0, 0, 0, 0) 2px,
-                    rgba(0, 0, 0, 0.15) 2px,
-                    rgba(0, 0, 0, 0.15) 4px);
+                    var(--crt-line) 0px,
+                    var(--crt-line) 1px,
+                    transparent 1px,
+                    transparent 3px);
             pointer-events: none;
             z-index: 9999;
         }
 
         .container {
+            max-width: 420px;
+            margin: 0 auto;
+            padding: 16px 12px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            min-height: 100vh;
+            gap: 16px;
             min-height: 100dvh;
-            padding: 20px;
-            position: relative;
         }
 
-        /* ── SHAKE ── */
-        @keyframes shake {
+        /* --- HEADER --- */
+        .header {
+            text-align: center;
+            width: 100%;
+        }
+
+        .header h1 {
+            font-family: 'VT323', monospace;
+            font-size: 1.6rem;
+            color: var(--amber);
+            letter-spacing: 0.15em;
+            text-shadow: 0 0 8px rgba(255, 176, 0, 0.4);
+            margin-bottom: 4px;
+        }
+
+        .header .subtitle {
+            font-size: 0.65rem;
+            color: var(--green-dim);
+            opacity: 0.6;
+            letter-spacing: 0.1em;
+        }
+
+        /* --- STAGE TRACKER --- */
+        .stage-tracker {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 8px 0;
+        }
+
+        .stage-pip {
+            width: 36px;
+            height: 8px;
+            border: 1px solid var(--green-dark);
+            background: transparent;
+            transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .stage-pip.completed {
+            background: var(--green);
+            border-color: var(--green);
+            box-shadow: 0 0 6px rgba(0, 255, 65, 0.5);
+        }
+
+        .stage-pip.active {
+            border-color: var(--amber);
+            background: rgba(255, 176, 0, 0.2);
+            animation: pip-pulse 1.2s ease-in-out infinite;
+        }
+
+        @keyframes pip-pulse {
+
+            0%,
+            100% {
+                box-shadow: 0 0 4px rgba(255, 176, 0, 0.3);
+            }
+
+            50% {
+                box-shadow: 0 0 10px rgba(255, 176, 0, 0.6);
+            }
+        }
+
+        .stage-label {
+            font-size: 0.7rem;
+            color: var(--amber-dim);
+            letter-spacing: 0.1em;
+            margin-bottom: 2px;
+            text-align: center;
+        }
+
+        /* --- GLOBAL TIMER --- */
+        .global-timer {
+            font-family: 'VT323', monospace;
+            font-size: 2rem;
+            color: var(--amber);
+            letter-spacing: 0.12em;
+            text-shadow: 0 0 8px rgba(255, 176, 0, 0.4);
+            text-align: center;
+            transition: color 0.3s, text-shadow 0.3s;
+        }
+
+        .global-timer.critical {
+            color: var(--red);
+            text-shadow: 0 0 12px rgba(255, 32, 32, 0.5);
+            animation: timer-blink 0.8s ease-in-out infinite;
+        }
+
+        @keyframes timer-blink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        /* --- DISPLAY PANEL --- */
+        .display-panel {
+            width: 200px;
+            height: 160px;
+            background: #050505;
+            border: 3px solid #2a2a2a;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-shadow:
+                inset 0 0 30px rgba(0, 0, 0, 0.8),
+                0 0 15px rgba(0, 255, 65, 0.05);
+        }
+
+        .display-panel::before {
+            content: '';
+            position: absolute;
+            inset: 4px;
+            border: 1px solid #1a1a1a;
+            border-radius: 3px;
+            pointer-events: none;
+        }
+
+        .display-panel::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(0deg,
+                    rgba(0, 255, 65, 0.015) 0px,
+                    rgba(0, 255, 65, 0.015) 1px,
+                    transparent 1px,
+                    transparent 2px);
+            border-radius: 4px;
+            pointer-events: none;
+        }
+
+        .display-number {
+            font-family: 'VT323', monospace;
+            font-size: 7rem;
+            color: var(--green);
+            text-shadow:
+                0 0 20px rgba(0, 255, 65, 0.6),
+                0 0 40px rgba(0, 255, 65, 0.3),
+                0 0 60px rgba(0, 255, 65, 0.1);
+            line-height: 1;
+            transition: opacity 0.15s;
+        }
+
+        .display-number.flash {
+            opacity: 0;
+        }
+
+        /* --- BUTTONS --- */
+        .buttons-row {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            width: 100%;
+            max-width: 360px;
+        }
+
+        .mem-btn {
+            flex: 1;
+            max-width: 80px;
+            aspect-ratio: 1;
+            background: var(--btn-bg);
+            border: 2px solid var(--btn-border);
+            border-radius: 6px;
+            color: var(--amber);
+            font-family: 'VT323', monospace;
+            font-size: 2.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.1s;
+            position: relative;
+            box-shadow: 0 3px 0 #0a0a00, 0 4px 8px rgba(0, 0, 0, 0.4);
+        }
+
+        .mem-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 1px 0 #0a0a00, 0 2px 4px rgba(0, 0, 0, 0.4);
+        }
+
+        .mem-btn:not(.disabled):hover {
+            border-color: var(--amber);
+            box-shadow: 0 3px 0 #0a0a00, 0 0 12px rgba(255, 176, 0, 0.2);
+        }
+
+        .mem-btn.correct {
+            border-color: var(--green);
+            color: var(--green);
+            background: rgba(0, 255, 65, 0.1);
+            box-shadow: 0 0 15px rgba(0, 255, 65, 0.3);
+        }
+
+        .mem-btn.wrong {
+            border-color: var(--red);
+            color: var(--red);
+            background: rgba(255, 32, 32, 0.15);
+            box-shadow: 0 0 15px rgba(255, 32, 32, 0.3);
+            animation: btn-shake 0.4s ease;
+        }
+
+        .mem-btn.disabled {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        @keyframes btn-shake {
 
             0%,
             100% {
                 transform: translateX(0);
             }
 
-            10%,
-            50%,
-            90% {
+            20% {
                 transform: translateX(-6px);
             }
 
-            30%,
-            70% {
+            40% {
                 transform: translateX(6px);
             }
 
-            20%,
             60% {
-                transform: translateX(-3px);
+                transform: translateX(-4px);
             }
 
-            40%,
             80% {
-                transform: translateX(3px);
+                transform: translateX(4px);
             }
         }
 
-        .shake {
-            animation: shake 0.5s cubic-bezier(.36, .07, .19, .97) both;
-        }
-
-        /* ── HEADER ── */
-        .vault-header {
+        /* --- STATUS / LOG --- */
+        .status-area {
+            width: 100%;
             text-align: center;
-            margin-bottom: 32px;
-        }
-
-        .vault-icon {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 16px;
-            position: relative;
-        }
-
-        .vault-icon svg {
-            width: 100%;
-            height: 100%;
-        }
-
-        .vault-title {
-            font-size: 13px;
-            letter-spacing: 4px;
-            color: var(--amber);
-            text-transform: uppercase;
-            margin-bottom: 6px;
-        }
-
-        .vault-subtitle {
-            font-size: 11px;
-            color: var(--text-dim);
-            letter-spacing: 1px;
-        }
-
-        /* ── LOGIN FORM ── */
-        .login-panel {
-            width: 100%;
-            max-width: 340px;
-            border: 1px solid var(--green-dark);
-            background: rgba(0, 255, 65, 0.02);
-            padding: 24px 20px;
-            position: relative;
-        }
-
-        .login-panel::before {
-            content: 'AUTHENTICATION REQUIRED';
-            position: absolute;
-            top: -9px;
-            left: 12px;
-            background: var(--bg);
-            padding: 0 8px;
-            font-size: 9px;
-            letter-spacing: 2px;
-            color: var(--green-dim);
-        }
-
-        .field {
-            margin-bottom: 18px;
-        }
-
-        .field-label {
-            display: block;
-            font-size: 9px;
-            letter-spacing: 2px;
-            color: var(--amber-dim);
-            text-transform: uppercase;
-            margin-bottom: 6px;
-        }
-
-        .field-input {
-            width: 100%;
-            background: var(--grey);
-            border: 1px solid var(--grey-light);
-            color: var(--green);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 14px;
-            padding: 10px 12px;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-
-        .field-input:focus {
-            border-color: var(--green-dark);
-        }
-
-        .field-input[readonly] {
-            color: var(--text-dim);
-            cursor: not-allowed;
-        }
-
-        .field-input::placeholder {
-            color: #333;
-        }
-
-        .btn-login {
-            width: 100%;
-            padding: 12px;
-            background: transparent;
-            border: 1px solid var(--green-dim);
-            color: var(--green);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 12px;
-            letter-spacing: 3px;
-            text-transform: uppercase;
-            cursor: pointer;
-            transition: all 0.2s;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .btn-login:active {
-            background: rgba(0, 255, 65, 0.1);
-        }
-
-        .btn-login:disabled {
-            opacity: 0.3;
-            cursor: not-allowed;
-        }
-
-        /* ── STATUS ── */
-        .status-line {
-            margin-top: 14px;
-            font-size: 10px;
-            text-align: center;
-            min-height: 16px;
-            transition: color 0.3s;
-        }
-
-        .status-line.error {
-            color: var(--red);
-        }
-
-        .status-line.neutral {
-            color: var(--text-dim);
-        }
-
-        /* ── ATTEMPTS ── */
-        .attempts-bar {
-            margin-top: 10px;
+            min-height: 60px;
             display: flex;
+            flex-direction: column;
+            align-items: center;
             justify-content: center;
             gap: 4px;
         }
 
-        .attempt-pip {
-            width: 6px;
-            height: 6px;
-            border: 1px solid var(--grey-light);
-            transition: all 0.3s;
+        .status-msg {
+            font-size: 0.75rem;
+            color: var(--green-dim);
+            letter-spacing: 0.05em;
+            opacity: 0.8;
+            transition: color 0.3s;
         }
 
-        .attempt-pip.used {
-            background: var(--red-dim);
-            border-color: var(--red-dim);
-        }
-
-        /* ── HINT ── */
-        .hint-box {
-            margin-top: 16px;
-            padding: 10px 12px;
-            border-left: 2px solid var(--amber-dim);
-            background: rgba(255, 176, 0, 0.03);
-            font-size: 10px;
-            color: var(--amber-dim);
-            line-height: 1.6;
-            opacity: 0;
-            max-height: 0;
-            overflow: hidden;
-            transition: opacity 0.5s, max-height 0.5s;
-        }
-
-        .hint-box.visible {
+        .status-msg.error {
+            color: var(--red);
             opacity: 1;
-            max-height: 200px;
         }
 
-        .hint-label {
-            display: block;
-            font-size: 8px;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            margin-bottom: 4px;
-            color: var(--amber);
+        .status-msg.success {
+            color: var(--green);
+            opacity: 1;
         }
 
-        /* ── VAULT DOOR (success) ── */
-        .vault-overlay {
+        .strikes-display {
+            font-size: 0.65rem;
+            color: var(--red-dim);
+            letter-spacing: 0.08em;
+        }
+
+        .strikes-display .x {
+            font-size: 0.8rem;
+        }
+
+        /* --- COOLDOWN OVERLAY --- */
+        .cooldown-overlay {
             position: fixed;
             inset: 0;
-            background: var(--bg);
+            background: rgba(10, 10, 10, 0.95);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             z-index: 1000;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.6s;
-        }
-
-        .vault-overlay.active {
-            opacity: 1;
-            pointer-events: all;
-        }
-
-        .vault-door {
-            width: 220px;
-            height: 220px;
-            border: 3px solid var(--green-dim);
-            border-radius: 50%;
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-
-        .vault-door::before {
-            content: '';
-            position: absolute;
-            inset: 6px;
-            border: 1px solid var(--green-dark);
-            border-radius: 50%;
-        }
-
-        .vault-handle {
-            width: 80px;
-            height: 8px;
-            background: var(--green-dim);
-            border-radius: 4px;
-            position: absolute;
-            transform-origin: center center;
-            transition: transform 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-            box-shadow: 0 0 12px rgba(0, 255, 65, 0.3);
-        }
-
-        .vault-handle.turned {
-            transform: rotate(720deg);
-        }
-
-        .vault-bolts {
-            position: absolute;
-            inset: 0;
-        }
-
-        .bolt {
-            position: absolute;
-            width: 10px;
-            height: 10px;
-            background: var(--green-dark);
-            border: 1px solid var(--green-dim);
-            border-radius: 50%;
-            transition: all 0.6s;
-        }
-
-        .bolt:nth-child(1) {
-            top: 14px;
-            left: 50%;
-            transform: translateX(-50%);
-        }
-
-        .bolt:nth-child(2) {
-            bottom: 14px;
-            left: 50%;
-            transform: translateX(-50%);
-        }
-
-        .bolt:nth-child(3) {
-            left: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-        }
-
-        .bolt:nth-child(4) {
-            right: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-        }
-
-        .bolt.retracted:nth-child(1) {
-            top: 50%;
-            opacity: 0;
-        }
-
-        .bolt.retracted:nth-child(2) {
-            bottom: 50%;
-            opacity: 0;
-        }
-
-        .bolt.retracted:nth-child(3) {
-            left: 50%;
-            opacity: 0;
-        }
-
-        .bolt.retracted:nth-child(4) {
-            right: 50%;
-            opacity: 0;
-        }
-
-        /* vault opening — split */
-        .vault-door-half {
-            position: absolute;
-            width: 50%;
-            height: 100%;
-            background: var(--bg);
-            border: none;
-            transition: transform 0.8s cubic-bezier(0.45, 0, 0.55, 1);
-            overflow: hidden;
-            z-index: 2;
-        }
-
-        .vault-door-half.left {
-            left: 0;
-            border-right: 1px solid var(--green-dark);
-        }
-
-        .vault-door-half.right {
-            right: 0;
-            border-left: 1px solid var(--green-dark);
-        }
-
-        .vault-door-half.left.open {
-            transform: translateX(-110%);
-        }
-
-        .vault-door-half.right.open {
-            transform: translateX(110%);
-        }
-
-        /* revealed content */
-        .vault-content {
+            gap: 16px;
+            padding: 20px;
             text-align: center;
-            z-index: 1;
-            opacity: 0;
-            transform: scale(0.8);
-            transition: all 0.6s 0.4s;
         }
 
-        .vault-content.revealed {
-            opacity: 1;
-            transform: scale(1);
-        }
-
-        .vault-number {
-            font-size: 48px;
-            font-weight: 700;
-            color: var(--green);
-            text-shadow: 0 0 20px rgba(0, 255, 65, 0.5), 0 0 40px rgba(0, 255, 65, 0.2);
-            line-height: 1;
-        }
-
-
-        .vault-label-top {
-            font-size: 9px;
-            letter-spacing: 3px;
-            color: var(--green-dim);
-            margin-bottom: 12px;
-        }
-
-        .vault-label-bottom {
-            font-size: 9px;
-            letter-spacing: 2px;
-            color: var(--text-dim);
-            margin-top: 16px;
-        }
-
-        /* full reveal after door opens */
-        .vault-result {
-            position: absolute;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            transition: opacity 0.8s;
-            transition-delay: 0.2s;
-        }
-
-        .vault-result.visible {
-            opacity: 1;
-        }
-
-        /* ── LOCKOUT ── */
-        .lockout-msg {
-            font-size: 10px;
-            color: var(--red-dim);
-            text-align: center;
-            margin-top: 12px;
+        .cooldown-overlay.hidden {
             display: none;
         }
 
-        .lockout-msg.visible {
-            display: block;
+        .cooldown-overlay .icon {
+            font-size: 3rem;
+            color: var(--red);
+            text-shadow: 0 0 20px rgba(255, 32, 32, 0.4);
+            animation: lock-pulse 2s ease-in-out infinite;
         }
 
-        /* ── ACCESS GRANTED FLASH ── */
-        @keyframes accessFlash {
-            0% {
-                opacity: 0;
-            }
-
-            20% {
-                opacity: 1;
-            }
-
-            80% {
-                opacity: 1;
-            }
-
-            100% {
-                opacity: 0;
-            }
-        }
-
-        .access-flash {
-            position: fixed;
-            inset: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--bg);
-            z-index: 999;
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        .access-flash.active {
-            animation: accessFlash 1.8s ease forwards;
-            pointer-events: all;
-        }
-
-        .access-text {
-            font-size: 14px;
-            letter-spacing: 6px;
-            color: var(--green);
-            text-shadow: 0 0 20px rgba(0, 255, 65, 0.6);
-        }
-
-        /* ── LOADING DOTS ── */
-        @keyframes blink {
+        @keyframes lock-pulse {
 
             0%,
             100% {
-                opacity: 0.2;
+                opacity: 0.6;
             }
 
             50% {
@@ -549,300 +382,532 @@
             }
         }
 
-        .loading-dots span {
-            animation: blink 1.2s infinite;
+        .cooldown-overlay .title {
+            font-family: 'VT323', monospace;
+            font-size: 1.4rem;
+            color: var(--red);
+            letter-spacing: 0.12em;
         }
 
-        .loading-dots span:nth-child(2) {
-            animation-delay: 0.2s;
+        .cooldown-overlay .timer {
+            font-family: 'VT323', monospace;
+            font-size: 2.8rem;
+            color: var(--amber);
+            text-shadow: 0 0 12px rgba(255, 176, 0, 0.4);
         }
 
-        .loading-dots span:nth-child(3) {
-            animation-delay: 0.4s;
+        .cooldown-overlay .hint {
+            font-size: 0.65rem;
+            color: var(--green-dim);
+            opacity: 0.5;
+            max-width: 280px;
+        }
+
+        /* --- POSITION LABELS --- */
+        .position-labels {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            width: 100%;
+            max-width: 360px;
+        }
+
+        .pos-label {
+            flex: 1;
+            max-width: 80px;
+            text-align: center;
+            font-size: 0.55rem;
+            color: var(--green-dark);
+            letter-spacing: 0.1em;
+            opacity: 0.6;
         }
     </style>
 </head>
 
 <body>
 
-    <div class="container" id="mainContainer">
-        <div class="vault-header">
-            <div class="vault-icon">
-                <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="8" y="16" width="64" height="52" rx="4" stroke="#00ff41" stroke-width="1.5" fill="none" />
-                    <rect x="14" y="22" width="52" height="40" rx="2" stroke="#003300" stroke-width="1" fill="none" />
-                    <circle cx="40" cy="42" r="12" stroke="#00ff41" stroke-width="1.5" fill="none" />
-                    <circle cx="40" cy="42" r="4" fill="#003300" stroke="#00ff41" stroke-width="1" />
-                    <line x1="40" y1="30" x2="40" y2="34" stroke="#00cc33" stroke-width="1.5" stroke-linecap="round" />
-                    <line x1="40" y1="50" x2="40" y2="54" stroke="#00cc33" stroke-width="1.5" stroke-linecap="round" />
-                    <line x1="28" y1="42" x2="32" y2="42" stroke="#00cc33" stroke-width="1.5" stroke-linecap="round" />
-                    <line x1="48" y1="42" x2="52" y2="42" stroke="#00cc33" stroke-width="1.5" stroke-linecap="round" />
-                    <rect x="28" y="10" width="24" height="6" rx="2" stroke="#003300" stroke-width="1" fill="none" />
-                </svg>
-            </div>
-            <div class="vault-title">0xC1PH3R vault</div>
-            <div class="vault-subtitle">encrypted storage // seed recovery</div>
+    <div class="container">
+        <div class="header">
+            <h1>MEM-CACHE</h1>
+            <div class="subtitle">// MODULE 0xC1PH3R — SEQUENTIAL MEMORY RECOVERY //</div>
         </div>
 
-        <div class="login-panel" id="loginPanel">
-            <div class="field">
-                <label class="field-label">Identity</label>
-                <input class="field-input" type="text" value="0xC1PH3R" readonly>
-            </div>
-            <div class="field">
-                <label class="field-label">Passphrase</label>
-                <input class="field-input" type="password" id="passInput" placeholder="enter passphrase"
-                    autocomplete="off" autocapitalize="off" spellcheck="false">
-            </div>
-            <button class="btn-login" id="btnLogin" type="button">Decrypt vault</button>
+        <div class="stage-label">STAGE <span id="stageNum">1</span> / 5</div>
 
-            <div class="status-line neutral" id="statusLine">&nbsp;</div>
+        <div class="stage-tracker">
+            <div class="stage-pip active" data-stage="0"></div>
+            <div class="stage-pip" data-stage="1"></div>
+            <div class="stage-pip" data-stage="2"></div>
+            <div class="stage-pip" data-stage="3"></div>
+            <div class="stage-pip" data-stage="4"></div>
+        </div>
 
-            <div class="attempts-bar" id="attemptsBar"></div>
+        <div class="global-timer" id="globalTimer">01:00</div>
 
-            <div class="hint-box" id="hintBox">
-                <span class="hint-label">Intercept</span>
-                <span id="hintText"></span>
-            </div>
+        <div class="display-panel">
+            <div class="display-number" id="displayNum">—</div>
+        </div>
 
-            <div class="lockout-msg" id="lockoutMsg">
-                Troppi tentativi. Vault temporaneamente bloccato<span
-                    class="loading-dots"><span>.</span><span>.</span><span>.</span></span>
-            </div>
+        <div class="position-labels">
+            <div class="pos-label">POS 1</div>
+            <div class="pos-label">POS 2</div>
+            <div class="pos-label">POS 3</div>
+            <div class="pos-label">POS 4</div>
+        </div>
+
+        <div class="buttons-row" id="buttonsRow">
+            <button class="mem-btn disabled" data-pos="0">—</button>
+            <button class="mem-btn disabled" data-pos="1">—</button>
+            <button class="mem-btn disabled" data-pos="2">—</button>
+            <button class="mem-btn disabled" data-pos="3">—</button>
+        </div>
+
+        <div class="status-area">
+            <div class="status-msg" id="statusMsg">Inizializzazione modulo…</div>
+            <div class="strikes-display" id="strikesDisplay"></div>
         </div>
     </div>
 
-    <!-- ACCESS GRANTED flash -->
-    <div class="access-flash" id="accessFlash">
-        <div class="access-text">ACCESS GRANTED</div>
+    <!-- COOLDOWN -->
+    <div class="cooldown-overlay hidden" id="cooldownOverlay">
+        <div class="icon">⛔</div>
+        <div class="title">SISTEMA BLOCCATO</div>
+        <div class="timer" id="cooldownTimer">--:--</div>
+        <div class="hint">Troppi errori consecutivi. Il sistema si è bloccato temporaneamente per prevenire accessi non
+            autorizzati.</div>
     </div>
 
-    <!-- VAULT OPENING overlay -->
-    <div class="vault-overlay" id="vaultOverlay">
-        <div class="vault-door" id="vaultDoor">
-            <div class="vault-bolts" id="vaultBolts">
-                <div class="bolt"></div>
-                <div class="bolt"></div>
-                <div class="bolt"></div>
-                <div class="bolt"></div>
-            </div>
-            <div class="vault-handle" id="vaultHandle"></div>
-            <div class="vault-door-half left" id="doorLeft"></div>
-            <div class="vault-door-half right" id="doorRight"></div>
-            <div class="vault-content" id="vaultContent">
-                <div class="vault-label-top">BIP-39 INDEX</div>
-                <div class="vault-number" id="vaultNumber"></div>
-                <div class="vault-label-bottom">seed word #7 recovered</div>
-            </div>
-        </div>
-    </div>
+
 
     <script>
-        (function () {
-            'use strict';
+        'use strict';
 
-            /* ── CONFIG ── */
-            const PASSPHRASE = atob('d3IxdDNjMGQz');
-            const SEED_INDEX = atob('NzI3');
-            const MAX_PIPS = 10;
-            const LOCKOUT_AT = 10;
-            const LOCKOUT_MS = 15000;
-            const HINTS = [
-                { at: 3, text: '«La mia identità non vive su nessun server — vive su un protocollo.»' },
-                { at: 5, text: 'I relay trasmettono note pubbliche. Il mio handle ti aiuterà a trovarmi.' },
-                { at: 8, text: 'Cerca 0xc1ph3r@iris.to su un client Nostr. La passphrase è nascosta tra le sue note — scritta come un cypherpunk scriverebbe.' },
-            ];
+        /* ========== CONFIG ========== */
+        const TOTAL_STAGES = 5;
+        const REWARD_DIGITS = [0, 7, 2, 7];
+        const LS_KEY = 'c2140_mem_cd';
 
-            /* ── STATE ── */
-            let attempts = 0;
-            let lockedOut = false;
-            let solved = false;
+        const COOLDOWN_SECONDS = 30;
+        const COOLDOWN_THRESHOLD = 3;
+        const GLOBAL_TIME = 60;  /* seconds */
 
-            /* ── DOM ── */
-            const passInput = document.getElementById('passInput');
-            const btnLogin = document.getElementById('btnLogin');
-            const statusLine = document.getElementById('statusLine');
-            const attemptsBar = document.getElementById('attemptsBar');
-            const hintBox = document.getElementById('hintBox');
-            const hintText = document.getElementById('hintText');
-            const loginPanel = document.getElementById('loginPanel');
-            const mainContainer = document.getElementById('mainContainer');
-            const lockoutMsg = document.getElementById('lockoutMsg');
-            const accessFlash = document.getElementById('accessFlash');
-            const vaultOverlay = document.getElementById('vaultOverlay');
-            const vaultHandle = document.getElementById('vaultHandle');
-            const vaultBolts = document.getElementById('vaultBolts');
-            const doorLeft = document.getElementById('doorLeft');
-            const doorRight = document.getElementById('doorRight');
-            const vaultContent = document.getElementById('vaultContent');
+        /* ========== STATE ========== */
+        let stages = [];        /* [{display, buttons, correctPos, correctLabel}] */
+        let history = [];       /* [{pressedPos, pressedLabel}] */
+        let currentStage = 0;
+        let inputLocked = false;
+        let totalErrors = 0;
+        let globalTimerId = null;
+        let globalSecondsLeft = GLOBAL_TIME;
 
-            /* ── INIT PIPS ── */
-            for (let i = 0; i < MAX_PIPS; i++) {
-                const pip = document.createElement('div');
-                pip.className = 'attempt-pip';
-                attemptsBar.appendChild(pip);
+        /* ========== DOM ========== */
+        const $display = document.getElementById('displayNum');
+        const $stageNum = document.getElementById('stageNum');
+        const $buttons = document.getElementById('buttonsRow');
+        const $status = document.getElementById('statusMsg');
+        const $strikes = document.getElementById('strikesDisplay');
+        const $cdOverlay = document.getElementById('cooldownOverlay');
+        const $cdTimer = document.getElementById('cooldownTimer');
+        const $gTimer = document.getElementById('globalTimer');
+        const pips = document.querySelectorAll('.stage-pip');
+        const btns = () => $buttons.querySelectorAll('.mem-btn');
+
+        /* ========== UTILS ========== */
+        function shuffle(arr) {
+            const a = [...arr];
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+
+        function randInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        /* ========== RULES ENGINE ========== */
+        function solveStage(stageIdx, stages, history) {
+            const s = stages[stageIdx];
+            const d = s.display;  /* 1-4 */
+            const labels = s.buttons; /* array of labels at positions 0-3 */
+
+            if (stageIdx === 0) {
+                /* Stage 1 */
+                if (d === 1) return { pos: 1 };  /* press 2nd button (0-indexed: 1) */
+                if (d === 2) return { pos: 1 };
+                if (d === 3) return { pos: 2 };
+                if (d === 4) return { pos: 3 };
             }
 
-            /* ── VIBRATE ── */
-            function vibrateDevice() {
-                if (navigator.vibrate) {
-                    navigator.vibrate([50, 30, 80]);
-                }
+            if (stageIdx === 1) {
+                /* Stage 2 */
+                if (d === 1) return { label: 4 };            /* button labeled "4" */
+                if (d === 2) return { pos: history[0].pressedPos };  /* same position as stage 1 */
+                if (d === 3) return { pos: 0 };               /* first button */
+                if (d === 4) return { pos: history[0].pressedPos };
             }
 
-            /* ── SHAKE ── */
-            function shakePanel() {
-                loginPanel.classList.remove('shake');
-                void loginPanel.offsetWidth; // reflow
-                loginPanel.classList.add('shake');
-                vibrateDevice();
+            if (stageIdx === 2) {
+                /* Stage 3 */
+                if (d === 1) return { label: history[1].pressedLabel }; /* same label as stage 2 */
+                if (d === 2) return { label: history[0].pressedLabel }; /* same label as stage 1 */
+                if (d === 3) return { pos: 2 };                          /* third button */
+                if (d === 4) return { label: 4 };                        /* button labeled "4" */
             }
 
-            /* ── UPDATE HINTS ── */
-            function updateHint() {
-                let bestHint = null;
-                for (const h of HINTS) {
-                    if (attempts >= h.at) bestHint = h;
-                }
-                if (bestHint) {
-                    hintText.textContent = bestHint.text;
-                    hintBox.classList.add('visible');
-                }
+            if (stageIdx === 3) {
+                /* Stage 4 */
+                if (d === 1) return { pos: history[0].pressedPos };      /* same pos as stage 1 */
+                if (d === 2) return { pos: 0 };                          /* first button */
+                if (d === 3) return { pos: history[1].pressedPos };      /* same pos as stage 2 */
+                if (d === 4) return { pos: history[1].pressedPos };      /* same pos as stage 2 */
             }
 
-            /* ── LOCKOUT ── */
-            function startLockout() {
-                lockedOut = true;
-                btnLogin.disabled = true;
-                passInput.disabled = true;
-                lockoutMsg.classList.add('visible');
+            if (stageIdx === 4) {
+                /* Stage 5 */
+                if (d === 1) return { label: history[0].pressedLabel };  /* same label as stage 1 */
+                if (d === 2) return { label: history[1].pressedLabel };  /* same label as stage 2 */
+                if (d === 3) return { label: history[3].pressedLabel };  /* same label as stage 4 */
+                if (d === 4) return { label: history[2].pressedLabel };  /* same label as stage 3 */
+            }
+        }
 
-                setTimeout(() => {
-                    lockedOut = false;
-                    btnLogin.disabled = false;
-                    passInput.disabled = false;
-                    lockoutMsg.classList.remove('visible');
-                    statusLine.textContent = 'Vault sbloccato. Riprova.';
-                    statusLine.className = 'status-line neutral';
-                    passInput.focus();
-                }, LOCKOUT_MS);
+        function getCorrectPosition(stageIdx) {
+            const result = solveStage(stageIdx, stages, history);
+            if (result.pos !== undefined) return result.pos;
+            /* Find position of button with matching label */
+            const labels = stages[stageIdx].buttons;
+            return labels.indexOf(result.label);
+        }
+
+        /* ========== GENERATE STAGES ========== */
+        function generateStages() {
+            stages = [];
+            history = [];
+            currentStage = 0;
+
+            for (let i = 0; i < TOTAL_STAGES; i++) {
+                stages.push({
+                    display: randInt(1, 4),
+                    buttons: shuffle([1, 2, 3, 4])
+                });
             }
 
-            /* ── SUCCESS SEQUENCE ── */
-            function triggerSuccess() {
-                solved = true;
-                btnLogin.disabled = true;
-                passInput.disabled = true;
+            /* Validate solvability — each stage must have a findable correct button.
+               For stages referencing history, we simulate forward. */
+            for (let i = 0; i < TOTAL_STAGES; i++) {
+                const correctPos = (() => {
+                    const result = solveStage(i, stages, history);
+                    if (result.pos !== undefined) return result.pos;
+                    return stages[i].buttons.indexOf(result.label);
+                })();
 
-                statusLine.textContent = 'Decrypting...';
-                statusLine.className = 'status-line neutral';
-                statusLine.style.color = 'var(--green)';
+                if (correctPos < 0 || correctPos > 3) {
+                    /* Shouldn't happen with labels [1-4], but regenerate if so */
+                    return generateStages();
+                }
 
-                // Phase 1: "ACCESS GRANTED" flash
-                setTimeout(() => {
-                    accessFlash.classList.add('active');
-                }, 600);
-
-                // Phase 2: Show vault overlay
-                setTimeout(() => {
-                    vaultOverlay.classList.add('active');
-                }, 2400);
-
-                // Phase 3: Turn handle
-                setTimeout(() => {
-                    vaultHandle.classList.add('turned');
-                }, 3000);
-
-                // Phase 4: Retract bolts
-                setTimeout(() => {
-                    const bolts = vaultBolts.querySelectorAll('.bolt');
-                    bolts.forEach(b => b.classList.add('retracted'));
-                }, 4200);
-
-                // Phase 5: Open doors, hide handle and bolts
-                setTimeout(() => {
-                    doorLeft.classList.add('open');
-                    doorRight.classList.add('open');
-                    vaultHandle.style.opacity = '0';
-                    vaultHandle.style.transition = 'opacity 0.4s';
-                    vaultBolts.style.opacity = '0';
-                    vaultBolts.style.transition = 'opacity 0.4s';
-                }, 4800);
-
-                // Phase 6: Reveal content
-                setTimeout(() => {
-                    document.getElementById('vaultNumber').textContent = SEED_INDEX;
-                    vaultContent.classList.add('revealed');
-                }, 5600);
+                history.push({
+                    pressedPos: correctPos,
+                    pressedLabel: stages[i].buttons[correctPos]
+                });
             }
 
-            /* ── ATTEMPT ── */
-            function tryLogin() {
-                if (solved || lockedOut) return;
+            /* Reset history for actual play */
+            history = [];
+        }
 
-                const input = passInput.value.trim();
+        /* ========== RENDER ========== */
+        function renderStage() {
+            const s = stages[currentStage];
 
-                if (!input) {
-                    statusLine.textContent = 'Inserisci la passphrase.';
-                    statusLine.className = 'status-line error';
-                    shakePanel();
-                    return;
-                }
+            /* Display number with flash effect */
+            $display.style.color = '';
+            $display.classList.add('flash');
+            setTimeout(() => {
+                $display.textContent = s.display;
+                $display.classList.remove('flash');
+            }, 120);
 
-                attempts++;
-
-                // Update pips
-                const pips = attemptsBar.querySelectorAll('.attempt-pip');
-                if (attempts <= MAX_PIPS) {
-                    pips[attempts - 1].classList.add('used');
-                }
-
-                if (input === PASSPHRASE) {
-                    triggerSuccess();
-                    return;
-                }
-
-                // Failed
-                shakePanel();
-
-                const remaining = LOCKOUT_AT - attempts;
-                if (remaining > 0) {
-                    statusLine.textContent = `Passphrase errata. ${remaining} tentativi rimanenti.`;
-                    statusLine.className = 'status-line error';
-                }
-
-                passInput.value = '';
-                passInput.focus();
-
-                updateHint();
-
-                // Lockout check
-                if (attempts >= LOCKOUT_AT) {
-                    statusLine.textContent = 'Troppi tentativi.';
-                    statusLine.className = 'status-line error';
-                    startLockout();
-                    // Reset pip counter after lockout
-                    setTimeout(() => {
-                        attempts = Math.max(attempts, HINTS[HINTS.length - 1].at); // keep hints visible
-                        const allPips = attemptsBar.querySelectorAll('.attempt-pip');
-                        allPips.forEach(p => p.classList.remove('used'));
-                    }, LOCKOUT_MS);
-                }
-            }
-
-            /* ── EVENTS ── */
-            btnLogin.addEventListener('click', tryLogin);
-            passInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') tryLogin();
+            /* Buttons */
+            const buttons = btns();
+            buttons.forEach((btn, i) => {
+                btn.textContent = s.buttons[i];
+                btn.dataset.pos = i;
+                btn.dataset.label = s.buttons[i];
+                btn.className = 'mem-btn';
+                btn.style.fontSize = '';
+                btn.style.pointerEvents = '';
             });
 
-            // Focus on load
-            setTimeout(() => passInput.focus(), 300);
-        })();
+            /* Stage label */
+            $stageNum.textContent = currentStage + 1;
+
+            /* Pips */
+            pips.forEach((pip, i) => {
+                pip.className = 'stage-pip';
+                if (i < currentStage) pip.classList.add('completed');
+                else if (i === currentStage) pip.classList.add('active');
+            });
+
+            /* Status */
+            $status.textContent = `Analizza il display. Seleziona il pulsante corretto.`;
+            $status.className = 'status-msg';
+
+            inputLocked = false;
+        }
+
+        function renderStrikes() {
+            if (totalErrors === 0) {
+                $strikes.innerHTML = '';
+                return;
+            }
+            const xs = Array.from({ length: totalErrors }, () => '<span class="x">✘</span>').join(' ');
+            $strikes.innerHTML = `ERRORI: ${xs}`;
+        }
+
+        /* ========== COOLDOWN ========== */
+        function getCooldownData() {
+            try {
+                const raw = localStorage.getItem(LS_KEY);
+                if (!raw) return null;
+                return JSON.parse(raw);
+            } catch { return null; }
+        }
+
+        function saveCooldownData(unlocksAt) {
+            try {
+                localStorage.setItem(LS_KEY, JSON.stringify({ unlocksAt }));
+            } catch { }
+        }
+
+        function clearCooldown() {
+            try { localStorage.removeItem(LS_KEY); } catch { }
+        }
+
+        function checkCooldown() {
+            const data = getCooldownData();
+            if (!data || !data.unlocksAt) return false;
+
+            if (Date.now() < data.unlocksAt) {
+                showCooldownScreen(data.unlocksAt);
+                return true;
+            }
+            /* Cooldown expired — clear it */
+            clearCooldown();
+            return false;
+        }
+
+        function showCooldownScreen(unlocksAt) {
+            $cdOverlay.classList.remove('hidden');
+            inputLocked = true;
+            stopGlobalTimer();
+
+            const tick = () => {
+                const remaining = Math.max(0, unlocksAt - Date.now());
+                if (remaining <= 0) {
+                    $cdOverlay.classList.add('hidden');
+                    clearCooldown();
+                    /* Reset errors after cooldown served */
+                    totalErrors = 0;
+                    renderStrikes();
+                    inputLocked = false;
+                    startRound();
+                    return;
+                }
+                const secs = Math.ceil(remaining / 1000);
+                $cdTimer.textContent = `00:${String(secs).padStart(2, '0')}`;
+                requestAnimationFrame(tick);
+            };
+            tick();
+        }
+
+        function triggerCooldown() {
+            if (totalErrors >= COOLDOWN_THRESHOLD) {
+                const unlocksAt = Date.now() + COOLDOWN_SECONDS * 1000;
+                saveCooldownData(unlocksAt);
+                showCooldownScreen(unlocksAt);
+            }
+        }
+
+        /* ========== GLOBAL TIMER ========== */
+        function renderGlobalTimer() {
+            const mins = Math.floor(globalSecondsLeft / 60);
+            const secs = globalSecondsLeft % 60;
+            $gTimer.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+            if (globalSecondsLeft <= 10) {
+                $gTimer.classList.add('critical');
+            } else {
+                $gTimer.classList.remove('critical');
+            }
+        }
+
+        function startGlobalTimer() {
+            stopGlobalTimer();
+            globalSecondsLeft = GLOBAL_TIME;
+            $gTimer.style.color = '';
+            $gTimer.style.textShadow = '';
+            $gTimer.classList.remove('critical');
+            renderGlobalTimer();
+
+            globalTimerId = setInterval(() => {
+                globalSecondsLeft--;
+                renderGlobalTimer();
+
+                if (globalSecondsLeft <= 0) {
+                    stopGlobalTimer();
+                    onGlobalTimeout();
+                }
+            }, 1000);
+        }
+
+        function stopGlobalTimer() {
+            if (globalTimerId !== null) {
+                clearInterval(globalTimerId);
+                globalTimerId = null;
+            }
+        }
+
+        function onGlobalTimeout() {
+            inputLocked = true;
+            btns().forEach(b => b.classList.add('disabled'));
+
+            $display.textContent = '✗';
+            $display.style.color = 'var(--red)';
+            $status.textContent = 'Tempo scaduto. Reset del modulo…';
+            $status.className = 'status-msg error';
+
+            totalErrors++;
+            renderStrikes();
+
+            setTimeout(() => {
+                $display.style.color = '';
+                generateStages();
+                triggerCooldown();
+                if (!$cdOverlay.classList.contains('hidden')) return;
+                startRound();
+            }, 1800);
+        }
+
+        /* ========== START ROUND (generate + timer) ========== */
+        function startRound() {
+            generateStages();
+            renderStage();
+            startGlobalTimer();
+        }
+
+        /* ========== BUTTON HANDLER ========== */
+        function handlePress(posIdx) {
+            if (inputLocked) return;
+            inputLocked = true;
+
+            const correctPos = getCorrectPosition(currentStage);
+            const pressedLabel = stages[currentStage].buttons[posIdx];
+            const btn = btns()[posIdx];
+
+            if (posIdx === correctPos) {
+                /* Correct */
+                btn.classList.add('correct');
+                history.push({ pressedPos: posIdx, pressedLabel });
+
+                $status.textContent = `Stage ${currentStage + 1} superato.`;
+                $status.className = 'status-msg success';
+
+                /* Mark pip completed */
+                pips[currentStage].className = 'stage-pip completed';
+
+                currentStage++;
+
+                if (currentStage >= TOTAL_STAGES) {
+                    /* WIN */
+                    setTimeout(showSuccess, 600);
+                    return;
+                }
+
+                setTimeout(() => renderStage(), 700);
+
+            } else {
+                /* Wrong */
+                btn.classList.add('wrong');
+                totalErrors++;
+                renderStrikes();
+
+                $status.textContent = `Errore. Reset allo stage 1.`;
+                $status.className = 'status-msg error';
+
+                /* Disable all buttons during reset */
+                btns().forEach(b => b.classList.add('disabled'));
+
+                setTimeout(() => {
+                    generateStages();
+                    triggerCooldown();
+                    if (!$cdOverlay.classList.contains('hidden')) return;
+                    renderStage();
+                    startGlobalTimer();  /* fresh 60s for new attempt */
+                }, 1200);
+            }
+        }
+
+        /* ========== SUCCESS ========== */
+        function showSuccess() {
+            clearCooldown();
+            stopGlobalTimer();
+            inputLocked = true;
+
+            /* Flash display */
+            $display.textContent = '✓';
+            $display.style.color = 'var(--green)';
+
+            /* Show digits on the four buttons */
+            const buttons = btns();
+            buttons.forEach((btn, i) => {
+                btn.className = 'mem-btn correct';
+                btn.textContent = REWARD_DIGITS[i];
+                btn.style.fontSize = '2.4rem';
+                btn.style.pointerEvents = 'none';
+            });
+
+            /* All pips completed */
+            pips.forEach(p => p.className = 'stage-pip completed');
+
+            /* Timer frozen — show remaining time in green */
+            $gTimer.classList.remove('critical');
+            $gTimer.style.color = 'var(--green)';
+            $gTimer.style.textShadow = '0 0 12px rgba(0, 255, 65, 0.5)';
+
+            /* Status */
+            $status.textContent = 'MODULO DISARMATO — INDICE RECUPERATO';
+            $status.className = 'status-msg success';
+            $stageNum.textContent = '✓';
+        }
+
+        /* ========== INIT ========== */
+        function init() {
+            if (checkCooldown()) {
+                generateStages();
+                return;
+            }
+
+            renderStrikes();
+            setTimeout(() => startRound(), 400);
+        }
+
+        /* Event delegation for buttons */
+        $buttons.addEventListener('click', (e) => {
+            const btn = e.target.closest('.mem-btn');
+            if (!btn || btn.classList.contains('disabled')) return;
+            handlePress(parseInt(btn.dataset.pos, 10));
+        });
+
+        /* Prevent double-tap zoom on iOS */
+        document.addEventListener('touchend', (e) => {
+            if (e.target.closest('.mem-btn')) e.preventDefault();
+        }, { passive: false });
+
+        init();
     </script>
-    <div
-        style="position:fixed;bottom:12px;left:0;right:0;text-align:center;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;color:#333;">
-        0xc1ph3r@iris.to</div>
 </body>
 
 </html>
