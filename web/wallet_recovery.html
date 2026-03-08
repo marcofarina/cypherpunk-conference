@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>SEED TRACKER — Cypherpunk 2140</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Share+Tech+Mono&display=swap"
+        rel="stylesheet">
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        :root {
+            --bg: #0a0a0a;
+            --green: #00ff41;
+            --green-dim: #00cc33;
+            --green-dark: #003300;
+            --amber: #ffb000;
+            --red: #ff2040;
+            --grey: #1a1a1a;
+            --grey-light: #2a2a2a;
+            --text-dim: #556655;
+            --locked: #00ff4133;
+        }
+
+        html {
+            font-size: 16px
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--green);
+            font-family: 'JetBrains Mono', 'Share Tech Mono', monospace;
+            min-height: 100dvh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: repeating-linear-gradient(0deg,
+                    transparent,
+                    transparent 2px,
+                    rgba(0, 0, 0, 0.08) 2px,
+                    rgba(0, 0, 0, 0.08) 4px);
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        .container {
+            max-width: 420px;
+            margin: 0 auto;
+            padding: 16px 12px 80px;
+        }
+
+        /* HEADER */
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--green-dark);
+        }
+
+        .header h1 {
+            font-size: 1.1rem;
+            letter-spacing: 0.15em;
+            color: var(--amber);
+            margin-bottom: 4px;
+        }
+
+        .header .sub {
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            letter-spacing: 0.1em;
+        }
+
+        /* SCORE DISPLAY */
+        .score-section {
+            margin-bottom: 20px;
+        }
+
+        .score-bar-outer {
+            width: 100%;
+            height: 28px;
+            background: var(--grey);
+            border: 1px solid var(--green-dark);
+            border-radius: 2px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .score-bar-inner {
+            height: 100%;
+            background: linear-gradient(90deg, var(--green-dark), var(--green-dim));
+            width: 0%;
+            transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+            position: relative;
+        }
+
+        .score-bar-inner.complete {
+            background: linear-gradient(90deg, var(--green-dark), var(--green), var(--amber));
+        }
+
+        .score-bar-inner::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--green);
+            box-shadow: 0 0 8px var(--green), 0 0 16px var(--green);
+        }
+
+        .score-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-top: 6px;
+            font-size: 0.7rem;
+        }
+
+        .score-number {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--green);
+            text-shadow: 0 0 10px var(--green);
+            transition: color 0.3s;
+        }
+
+        .score-number.complete {
+            color: var(--amber);
+            text-shadow: 0 0 12px var(--amber);
+        }
+
+        .score-unit {
+            color: var(--text-dim);
+            font-size: 0.7rem;
+        }
+
+        .words-count {
+            color: var(--text-dim);
+            letter-spacing: 0.05em;
+        }
+
+        /* SEED SLOTS */
+        .slots {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .slot {
+            display: grid;
+            grid-template-columns: 32px 1fr 44px;
+            align-items: center;
+            gap: 8px;
+            background: var(--grey);
+            border: 1px solid var(--green-dark);
+            border-radius: 2px;
+            padding: 8px 10px;
+            transition: border-color 0.3s, background 0.3s;
+        }
+
+        .slot.locked {
+            border-color: var(--green-dim);
+            background: var(--locked);
+        }
+
+        .slot.locked .slot-input {
+            color: var(--green);
+            text-shadow: 0 0 6px var(--green);
+            border-bottom-color: transparent;
+        }
+
+        .slot.error {
+            animation: shake 0.4s ease;
+        }
+
+        .slot.flash {
+            animation: flash-green 0.6s ease;
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0)
+            }
+
+            20% {
+                transform: translateX(-6px)
+            }
+
+            40% {
+                transform: translateX(6px)
+            }
+
+            60% {
+                transform: translateX(-4px)
+            }
+
+            80% {
+                transform: translateX(4px)
+            }
+        }
+
+        @keyframes flash-green {
+            0% {
+                background: var(--green);
+                border-color: var(--green)
+            }
+
+            100% {
+                background: var(--locked);
+                border-color: var(--green-dim)
+            }
+        }
+
+        .slot-num {
+            font-size: 0.65rem;
+            color: var(--amber);
+            letter-spacing: 0.05em;
+            text-align: center;
+        }
+
+        .slot-diff {
+            display: block;
+            font-size: 0.5rem;
+            color: var(--text-dim);
+            margin-top: 1px;
+            letter-spacing: 0;
+        }
+
+        .slot-input {
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid var(--green-dark);
+            color: var(--green-dim);
+            font-family: inherit;
+            font-size: 0.85rem;
+            letter-spacing: 0.08em;
+            padding: 4px 0;
+            width: 100%;
+            outline: none;
+            text-transform: lowercase;
+        }
+
+        .slot-input:focus {
+            border-bottom-color: var(--green);
+        }
+
+        .slot-input:disabled {
+            opacity: 1;
+            -webkit-text-fill-color: var(--green);
+        }
+
+        .slot-input::placeholder {
+            color: var(--text-dim);
+            font-size: 0.7rem;
+            letter-spacing: 0.05em;
+        }
+
+        .slot-status {
+            text-align: center;
+            font-size: 0.7rem;
+            min-width: 44px;
+        }
+
+        .slot-status .locked-icon {
+            color: var(--green);
+            text-shadow: 0 0 6px var(--green);
+        }
+
+        .slot-status .pts {
+            display: block;
+            font-size: 0.5rem;
+            color: var(--text-dim);
+            margin-top: 1px;
+        }
+
+        /* FOOTER */
+        .footer {
+            text-align: center;
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 1px solid var(--green-dark);
+            font-size: 0.55rem;
+            color: var(--text-dim);
+            letter-spacing: 0.08em;
+            line-height: 1.6;
+        }
+
+        .footer .handle {
+            color: var(--amber);
+        }
+
+        /* COMPLETION OVERLAY */
+        .overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.92);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            text-align: center;
+            padding: 24px;
+        }
+
+        .overlay.visible {
+            display: flex;
+            animation: fade-in 0.5s ease;
+        }
+
+        @keyframes fade-in {
+            from {
+                opacity: 0
+            }
+
+            to {
+                opacity: 1
+            }
+        }
+
+        .overlay h2 {
+            font-size: 1.3rem;
+            color: var(--amber);
+            letter-spacing: 0.15em;
+            margin-bottom: 12px;
+            text-shadow: 0 0 20px var(--amber);
+        }
+
+        .overlay .seed-display {
+            font-size: 0.7rem;
+            color: var(--green);
+            line-height: 2;
+            text-shadow: 0 0 8px var(--green);
+            max-width: 340px;
+            word-spacing: 0.3em;
+        }
+
+        .overlay .dismiss {
+            margin-top: 24px;
+            background: transparent;
+            border: 1px solid var(--green-dark);
+            color: var(--green-dim);
+            font-family: inherit;
+            font-size: 0.65rem;
+            padding: 8px 20px;
+            cursor: pointer;
+            letter-spacing: 0.1em;
+            border-radius: 2px;
+        }
+
+        .overlay .dismiss:active {
+            background: var(--green-dark);
+        }
+
+        /* RESET */
+        .reset-row {
+            text-align: center;
+            margin-top: 16px;
+        }
+
+        .reset-btn {
+            background: transparent;
+            border: 1px solid #331111;
+            color: #663333;
+            font-family: inherit;
+            font-size: 0.55rem;
+            padding: 6px 14px;
+            cursor: pointer;
+            letter-spacing: 0.08em;
+            border-radius: 2px;
+            transition: all 0.2s;
+        }
+
+        .reset-btn:active {
+            border-color: var(--red);
+            color: var(--red);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>SEED TRACKER</h1>
+            <div class="sub">CYPHERPUNK 2140 — RECOVERY IN CORSO</div>
+        </div>
+
+        <div class="score-section">
+            <div class="score-bar-outer">
+                <div class="score-bar-inner" id="scoreBar"></div>
+            </div>
+            <div class="score-label">
+                <span><span class="score-number" id="scoreNum">0</span><span class="score-unit"> / 100</span></span>
+                <span class="words-count" id="wordsCount">0 / 12 WORDS</span>
+            </div>
+        </div>
+
+        <div class="slots" id="slots"></div>
+
+        <div class="reset-row">
+            <button class="reset-btn" id="resetBtn">RESET TRACKER</button>
+        </div>
+
+        <div class="footer">
+            <div>WALLET RECOVERY — BIP-39 SEED PHRASE</div>
+            <div>SISTEMA DI TRACCIAMENTO <span class="handle">0xC1PH3R</span></div>
+        </div>
+    </div>
+
+    <div class="overlay" id="overlay">
+        <h2>WALLET RECOVERED</h2>
+        <div class="seed-display" id="seedDisplay"></div>
+        <button class="dismiss" id="dismissBtn">CHIUDI</button>
+    </div>
+
+    <script>
+        (function () {
+            'use strict';
+
+            /* ── obfuscated data ── */
+            var K = [
+                'ZGVjcmVhc2U=', 'cmVtb3Zl', 'c2VjcmV0', 'c2F0b3NoaQ==',
+                'cHJvb2Y=', 'ZGFuY2U=', 'Zm9vZA==', 'ZGV2aWNl',
+                'Y29kZQ==', 'ZXhpc3Q=', 'dHJ1c3Q=', 'ZGlzYWdyZWU='
+            ];
+
+            /* ── difficulty + weights ── */
+            var D = [1, 1, 1, 2, 1, 3, 2, 3, 1, 2, 1, 3];
+            var W = D.map(function (d) { return d === 1 ? 5 : d === 2 ? 10 : 40 / 3; });
+            var LABELS = ['', 'FACILE', 'FACILE', 'FACILE', 'MEDIO', 'FACILE', 'DIFF.', 'MEDIO', 'DIFF.', 'FACILE', 'MEDIO', 'FACILE', 'DIFF.'];
+
+            /* ── state ── */
+            var STORAGE_KEY = 'cp2140_tracker';
+            var solved = loadState();
+
+            function loadState() {
+                try {
+                    var s = localStorage.getItem(STORAGE_KEY);
+                    if (s) { return JSON.parse(s); }
+                } catch (e) { }
+                return {};
+            }
+            function saveState() {
+                try { localStorage.setItem(STORAGE_KEY, JSON.stringify(solved)); } catch (e) { }
+            }
+
+            function decode(i) { return atob(K[i]); }
+
+            function calcScore() {
+                var s = 0, n = 0;
+                for (var i = 0; i < 12; i++) {
+                    if (solved[i]) { s += W[i]; n++; }
+                }
+                return { score: Math.round(s), words: n };
+            }
+
+            /* ── build UI ── */
+            var slotsEl = document.getElementById('slots');
+            var inputs = [];
+
+            for (var i = 0; i < 12; i++) {
+                var slot = document.createElement('div');
+                slot.className = 'slot' + (solved[i] ? ' locked' : '');
+                slot.dataset.idx = i;
+
+                var num = document.createElement('div');
+                num.className = 'slot-num';
+                num.innerHTML = String(i + 1).padStart(2, '0') + '<span class="slot-diff">' + LABELS[i + 1] + '</span>';
+
+                var input = document.createElement('input');
+                input.className = 'slot-input';
+                input.type = 'text';
+                input.autocomplete = 'off';
+                input.autocapitalize = 'off';
+                input.spellcheck = false;
+                input.maxLength = 12;
+                input.placeholder = '_ _ _ _ _ _';
+                input.dataset.idx = i;
+
+                if (solved[i]) {
+                    input.value = solved[i];
+                    input.disabled = true;
+                }
+
+                var status = document.createElement('div');
+                status.className = 'slot-status';
+                status.id = 'status-' + i;
+                if (solved[i]) {
+                    status.innerHTML = '<span class="locked-icon">■ OK</span><span class="pts">+' + Math.round(W[i]) + ' pt</span>';
+                }
+
+                slot.appendChild(num);
+                slot.appendChild(input);
+                slot.appendChild(status);
+                slotsEl.appendChild(slot);
+                inputs.push(input);
+            }
+
+            /* ── events ── */
+            inputs.forEach(function (inp) {
+                inp.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        trySubmit(parseInt(inp.dataset.idx));
+                    }
+                });
+                inp.addEventListener('blur', function () {
+                    var idx = parseInt(inp.dataset.idx);
+                    if (inp.value.trim().length > 0 && !solved[idx]) {
+                        trySubmit(idx);
+                    }
+                });
+            });
+
+            function trySubmit(idx) {
+                if (solved[idx]) return;
+                var val = inputs[idx].value.trim().toLowerCase();
+                if (!val) return;
+                var correct = decode(idx);
+                var slot = inputs[idx].parentElement;
+
+                if (val === correct) {
+                    solved[idx] = val;
+                    saveState();
+                    inputs[idx].disabled = true;
+                    slot.classList.add('locked', 'flash');
+                    var st = document.getElementById('status-' + idx);
+                    st.innerHTML = '<span class="locked-icon">■ OK</span><span class="pts">+' + Math.round(W[idx]) + ' pt</span>';
+                    updateScore();
+                    /* focus next unsolved */
+                    for (var n = idx + 1; n < 12; n++) {
+                        if (!solved[n]) { inputs[n].focus(); break; }
+                    }
+                } else {
+                    slot.classList.remove('error');
+                    void slot.offsetWidth;
+                    slot.classList.add('error');
+                    inputs[idx].value = '';
+                    inputs[idx].focus();
+                }
+            }
+
+            function updateScore() {
+                var info = calcScore();
+                var scoreNum = document.getElementById('scoreNum');
+                var bar = document.getElementById('scoreBar');
+                var wordsCount = document.getElementById('wordsCount');
+
+                scoreNum.textContent = info.score;
+                bar.style.width = info.score + '%';
+                wordsCount.textContent = info.words + ' / 12 WORDS';
+
+                if (info.score >= 100) {
+                    scoreNum.classList.add('complete');
+                    bar.classList.add('complete');
+                    showOverlay();
+                } else {
+                    scoreNum.classList.remove('complete');
+                    bar.classList.remove('complete');
+                }
+            }
+
+            function showOverlay() {
+                var words = [];
+                for (var i = 0; i < 12; i++) {
+                    words.push((i + 1) + '. ' + (solved[i] || '???'));
+                }
+                document.getElementById('seedDisplay').textContent = words.join('  ');
+                document.getElementById('overlay').classList.add('visible');
+            }
+
+            document.getElementById('dismissBtn').addEventListener('click', function () {
+                document.getElementById('overlay').classList.remove('visible');
+            });
+
+            /* ── reset ── */
+            var resetBtn = document.getElementById('resetBtn');
+            var resetClicks = 0;
+            var resetTimer = null;
+
+            resetBtn.addEventListener('click', function () {
+                resetClicks++;
+                if (resetClicks === 1) {
+                    resetBtn.textContent = 'CONFERMA RESET';
+                    resetBtn.style.borderColor = '#993333';
+                    resetBtn.style.color = '#cc4444';
+                    resetTimer = setTimeout(function () {
+                        resetClicks = 0;
+                        resetBtn.textContent = 'RESET TRACKER';
+                        resetBtn.style.borderColor = '';
+                        resetBtn.style.color = '';
+                    }, 3000);
+                } else if (resetClicks >= 2) {
+                    clearTimeout(resetTimer);
+                    resetClicks = 0;
+                    solved = {};
+                    saveState();
+                    inputs.forEach(function (inp, idx) {
+                        inp.value = '';
+                        inp.disabled = false;
+                        inp.parentElement.classList.remove('locked', 'flash');
+                        document.getElementById('status-' + idx).innerHTML = '';
+                    });
+                    updateScore();
+                    resetBtn.textContent = 'RESET TRACKER';
+                    resetBtn.style.borderColor = '';
+                    resetBtn.style.color = '';
+                    document.getElementById('overlay').classList.remove('visible');
+                }
+            });
+
+            /* ── init ── */
+            updateScore();
+        })();
+    </script>
+</body>
+
+</html>
