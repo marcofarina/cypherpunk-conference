@@ -187,6 +187,85 @@
             transform: scale(0.98);
         }
 
+        /* ── TIME EDITOR (ready screen) ── */
+        .time-editor {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 50px;
+        }
+
+        .time-editor-label {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 14px;
+            letter-spacing: 4px;
+            color: var(--green-dim);
+            opacity: 0.5;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .te-btn {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 28px;
+            font-weight: 700;
+            width: 52px;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--green);
+            background: rgba(0, 255, 65, 0.05);
+            border: 1px solid rgba(0, 255, 65, 0.2);
+            cursor: pointer;
+            transition: all 0.15s;
+            outline: none;
+        }
+
+        .te-btn:hover {
+            background: rgba(0, 255, 65, 0.12);
+            border-color: rgba(0, 255, 65, 0.4);
+            text-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+        }
+
+        .te-btn:active {
+            transform: scale(0.92);
+        }
+
+        .te-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 56px;
+            font-weight: 700;
+            color: var(--green);
+            min-width: 120px;
+            text-align: center;
+            text-shadow: 0 0 15px rgba(0, 255, 65, 0.3);
+        }
+
+        .te-unit {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 18px;
+            color: var(--green-dim);
+            opacity: 0.5;
+            letter-spacing: 3px;
+            margin-left: 4px;
+        }
+
+        /* ── RESET BUTTON ── */
+        .ctrl-btn.reset {
+            color: var(--red-dim);
+            border-color: rgba(255, 32, 32, 0.15);
+            background: rgba(255, 32, 32, 0.05);
+            font-size: 11px;
+        }
+
+        .ctrl-btn.reset:hover {
+            opacity: 1;
+            border-color: rgba(255, 32, 32, 0.3);
+            background: rgba(255, 32, 32, 0.1);
+        }
+
         /* ── COUNTDOWN SCREEN ── */
         #countdownScreen {
             background: transparent;
@@ -576,6 +655,12 @@
             <div class="event-name">Cypherpunk 2140</div>
             <h1>R U READY?</h1>
         </div>
+        <div class="time-editor-label">set duration</div>
+        <div class="time-editor">
+            <button class="te-btn" id="teDown">−</button>
+            <div><span class="te-value" id="teValue">45</span><span class="te-unit">min</span></div>
+            <button class="te-btn" id="teUp">+</button>
+        </div>
         <button class="play-btn" id="playBtn">▶ PLAY</button>
     </div>
 
@@ -596,8 +681,9 @@
     <!-- FLOATING TERMINAL POPUPS -->
     <div id="popupLayer"></div>
 
-    <!-- CONTROLS — pause only during countdown -->
+    <!-- CONTROLS — pause + reset only during countdown -->
     <div class="controls hidden" id="controls">
+        <button class="ctrl-btn reset" id="resetBtn" title="Reset timer">✕ RESET</button>
         <button class="ctrl-btn" id="pauseBtn" title="Pause / Resume">⏸</button>
     </div>
 
@@ -610,18 +696,22 @@
         // ═══════════════════════════════════════════════
         //  CONFIG
         // ═══════════════════════════════════════════════
-        const TOTAL_SECONDS = 45 * 60; // 45 minutes
+        const DEFAULT_MINUTES = 45;
         const WARNING_THRESHOLD = 10 * 60; // 10 minutes — turns red
         const CRITICAL_THRESHOLD = 60; // 60 seconds — flashing + tenths
+        const LS_KEY = 'cp2140_timer';
+        const SAVE_INTERVAL = 1000; // save state every 1s
 
         // ═══════════════════════════════════════════════
         //  STATE
         // ═══════════════════════════════════════════════
-        let remaining = TOTAL_SECONDS;
+        let totalSeconds = DEFAULT_MINUTES * 60;
         let running = false;
         let paused = false;
         let lastTick = 0;
-        let remainingMs = TOTAL_SECONDS * 1000;
+        let remainingMs = totalSeconds * 1000;
+        let lastSave = 0;
+        let editorMinutes = DEFAULT_MINUTES;
 
         // ═══════════════════════════════════════════════
         //  ELEMENTS
@@ -632,11 +722,59 @@
         const timerSub = document.getElementById('timerSub');
         const controls = document.getElementById('controls');
         const pauseBtn = document.getElementById('pauseBtn');
+        const resetBtn = document.getElementById('resetBtn');
         const fsBtn = document.getElementById('fsBtn');
         const pausedOverlay = document.getElementById('pausedOverlay');
         const terminalLog = document.getElementById('terminalLog');
         const canvas = document.getElementById('bgCanvas');
         const ctx = canvas.getContext('2d');
+        const teValue = document.getElementById('teValue');
+        const teUp = document.getElementById('teUp');
+        const teDown = document.getElementById('teDown');
+
+        // ═══════════════════════════════════════════════
+        //  TIME EDITOR (ready screen)
+        // ═══════════════════════════════════════════════
+        function updateEditor() {
+            teValue.textContent = editorMinutes;
+        }
+
+        teUp.addEventListener('click', () => {
+            editorMinutes = Math.min(180, editorMinutes + 5);
+            updateEditor();
+        });
+        teDown.addEventListener('click', () => {
+            editorMinutes = Math.max(5, editorMinutes - 5);
+            updateEditor();
+        });
+
+        // ═══════════════════════════════════════════════
+        //  LOCALSTORAGE PERSISTENCE
+        // ═══════════════════════════════════════════════
+        function saveState() {
+            const state = {
+                running: running,
+                paused: paused,
+                totalMs: totalSeconds * 1000,
+                // Store the wall-clock time when timer would reach zero
+                // If paused, store remainingMs directly
+                endTime: paused ? null : (Date.now() + remainingMs),
+                remainingMs: paused ? remainingMs : null,
+            };
+            try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) { }
+        }
+
+        function loadState() {
+            try {
+                const raw = localStorage.getItem(LS_KEY);
+                if (!raw) return null;
+                return JSON.parse(raw);
+            } catch (e) { return null; }
+        }
+
+        function clearState() {
+            try { localStorage.removeItem(LS_KEY); } catch (e) { }
+        }
 
         // ═══════════════════════════════════════════════
         //  TERMINAL LOG — hacker scrolling text
@@ -844,10 +982,17 @@
             remainingMs = Math.max(0, remainingMs - delta);
             updateDisplay();
 
+            // Periodic save
+            if (timestamp - lastSave > SAVE_INTERVAL) {
+                lastSave = timestamp;
+                saveState();
+            }
+
             if (remainingMs <= 0) {
                 running = false;
                 stopTerminal();
                 stopPopups();
+                clearState();
                 return;
             }
 
@@ -857,7 +1002,7 @@
         // ═══════════════════════════════════════════════
         //  START
         // ═══════════════════════════════════════════════
-        function startCountdown() {
+        function enterCountdownView() {
             readyScreen.classList.add('hidden');
             countdownScreen.classList.remove('hidden');
             controls.classList.remove('hidden');
@@ -867,18 +1012,40 @@
             initNodes(80);
             drawNodes();
 
-            // Start terminal
+            // Start terminal + popups
             startTerminal();
-
-            // Start floating popups
             startPopups();
+        }
 
-            // Start timer
-            remainingMs = TOTAL_SECONDS * 1000;
+        function startCountdown() {
+            totalSeconds = editorMinutes * 60;
+            remainingMs = totalSeconds * 1000;
             running = true;
             paused = false;
             lastTick = 0;
+
+            enterCountdownView();
             updateDisplay();
+            saveState();
+            requestAnimationFrame(tick);
+        }
+
+        function resumeCountdown(ms, wasPaused) {
+            totalSeconds = Math.ceil(ms / 1000);
+            remainingMs = ms;
+            running = true;
+            paused = wasPaused;
+            lastTick = 0;
+
+            enterCountdownView();
+            updateDisplay();
+
+            if (paused) {
+                pauseBtn.textContent = '▶';
+                pauseBtn.classList.add('paused');
+                pausedOverlay.classList.add('active');
+            }
+
             requestAnimationFrame(tick);
         }
 
@@ -893,9 +1060,40 @@
             pauseBtn.textContent = paused ? '▶' : '⏸';
             pauseBtn.classList.toggle('paused', paused);
             pausedOverlay.classList.toggle('active', paused);
+            saveState();
         }
 
         pauseBtn.addEventListener('click', togglePause);
+
+        // ═══════════════════════════════════════════════
+        //  RESET
+        // ═══════════════════════════════════════════════
+        function resetTimer() {
+            if (!confirm('Reset timer and go back to start?')) return;
+            running = false;
+            paused = false;
+            clearState();
+            stopTerminal();
+            stopPopups();
+
+            // Back to ready screen
+            countdownScreen.classList.add('hidden');
+            readyScreen.classList.remove('hidden');
+            controls.classList.add('hidden');
+            pauseBtn.textContent = '⏸';
+            pauseBtn.classList.remove('paused');
+            pausedOverlay.classList.remove('active');
+            timerValue.classList.remove('warning', 'critical');
+            timerSub.classList.remove('warning');
+            timerSub.textContent = 'ESCAPE WHILE YOU CAN';
+
+            // Restore calm node background
+            cancelAnimationFrame(animFrame);
+            initNodes(50);
+            drawNodes();
+        }
+
+        resetBtn.addEventListener('click', resetTimer);
 
         // ═══════════════════════════════════════════════
         //  FULLSCREEN
@@ -1409,6 +1607,35 @@
             popupLayer.innerHTML = '';
             activePopups = 0;
         }
+
+        // ═══════════════════════════════════════════════
+        //  RESTORE ON PAGE LOAD
+        // ═══════════════════════════════════════════════
+        (function restoreSession() {
+            const saved = loadState();
+            if (!saved || !saved.running) return;
+
+            let ms;
+            if (saved.paused && saved.remainingMs != null) {
+                // Was paused — use stored remaining directly
+                ms = saved.remainingMs;
+            } else if (saved.endTime) {
+                // Was running — calculate from wall clock
+                ms = saved.endTime - Date.now();
+            } else {
+                clearState();
+                return;
+            }
+
+            if (ms <= 0) {
+                // Timer expired while page was closed
+                clearState();
+                return;
+            }
+
+            // Resume into countdown
+            resumeCountdown(ms, !!saved.paused);
+        })();
     </script>
 </body>
 
